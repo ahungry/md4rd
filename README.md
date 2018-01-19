@@ -2,6 +2,16 @@
 
 Read reddit interactively from within Emacs.
 
+# Usage
+
+Clone the repo, then in your Emacs init file:
+
+```lisp
+(add-to-list 'load-path "/path/to/repo")
+(require 'redditor-mode)
+(redditor-mode) ;; to launch it
+```
+
 # Screenshots
 
 See the following (shown in `emacs -nw` mode):
@@ -13,6 +23,7 @@ See the following (shown in `emacs -nw` mode):
 
 - multi-reddit (view many at once)
 - comment / post upvotes/downvotes
+- customize to view other reddits + various other UI customizations
 
 # License
 
