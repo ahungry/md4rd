@@ -6,8 +6,8 @@ Read reddit interactively from within Emacs.
 
 See the following (shown in `emacs -nw` mode):
 
-![subreddit](http://ahungry.com/images/redditor-mode-1.png)
-![comments](http://ahungry.com/images/redditor-mode-2.png)
+![subreddit](https://raw.githubusercontent.com/ahungry/redditor-mode/master/redditor-mode-1.png)
+![comments](https://raw.githubusercontent.com/ahungry/redditor-mode/master/redditor-mode-2.png)
 
 # todo
 
