@@ -44,7 +44,11 @@
 (defvar rm:cache-comments nil
   "Store the most recent comment cache/fetch.")
 
+(defvar rm:cache-subreddit nil
+  "Store the most recent comment cache/fetch.")
+
 (defvar rm:comments-composite nil)
+(defvar rm:subreddit-composite nil)
 
 (defvar rm:fetch-comments-callback
   (cl-function
@@ -52,17 +56,44 @@
      "Callback for async, DATA is the response from request."
      (let ((data (cl-getf data :data)))
        (setq rm:cache-comments data)
-       (message "Fetch done.")
+       (print rm:cache-comments)
+       (message "rm: Comment fetch complete.")
        (rm:comments-show)
-       ;; (print data)
        )))
   )
+
+(defvar rm:fetch-subreddit-callback
+  (cl-function
+   (lambda (&rest data &allow-other-keys)
+     "Callback for async, DATA is the response from request."
+     (let ((data (cl-getf data :data)))
+       (setq rm:cache-subreddit data)
+       (print rm:cache-subreddit)
+       (message "rm: Subreddit fetch complete.")
+       (rm:subreddit-show)
+       )))
+  )
+
+(defvar rm:subreddit-url
+  "https://www.reddit.com/r/emacs.json")
+
+(defvar rm:comment-url
+  "https://www.reddit.com/r/emacs/comments/7rbzqx/rms_please_help_proofreading_the_emacs_manual.json")
 
 (defun rm:fetch-comments ()
   "Get a list of the comments on a thread."
   (request-response-data
-   (request "https://www.reddit.com/r/emacs/comments/7rbzqx/rms_please_help_proofreading_the_emacs_manual.json"
+   (request rm:comment-url
             :complete rm:fetch-comments-callback
+            :sync nil
+            :parser 'json-read
+            :headers `(("User-Agent" . "fun")))))
+
+(defun rm:fetch-subreddit ()
+  "Get a list of the subreddit on a thread."
+  (request-response-data
+   (request rm:subreddit-url
+            :complete rm:fetch-subreddit-callback
             :sync nil
             :parser 'json-read
             :headers `(("User-Agent" . "fun")))))
@@ -97,12 +128,45 @@ COMMENTS block is the nested list structure with them."
     )
   )
 
+(defun rm:parse-subreddit-helper (subreddit)
+  "Parse the subreddit that were fetched.
+
+SUBREDDIT block is the nested list structure with them."
+  (let* ((data (assoc 'data subreddit))
+         (name (assoc 'permalink data))
+         (permalink (assoc 'permalink data))
+         (author (assoc 'author data))
+         (score (assoc 'score data))
+         (replies (assoc 'replies data))
+         (children (assoc 'children data)))
+    (when (and name permalink)
+      (let ((composite
+             `(
+               (name . ,(intern (cdr name)))
+               ,permalink
+               ,author
+               ,score)))
+        (push composite rm:subreddit-composite)))
+    (when children (rm:parse-subreddit (cdr children)))
+    (when (and replies
+               (cdr replies)
+               (listp (cdr replies)))
+      (rm:parse-subreddit-helper (cdr replies))
+      )
+    )
+  )
+
 (defun rm:parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
 
 COMMENTS-VECTOR is a vector of comments."
-  (mapcar #'rm:parse-comments-helper comments-vector)
-  )
+  (mapcar #'rm:parse-comments-helper comments-vector))
+
+(defun rm:parse-subreddit (subreddit-vector)
+  "Parse the cached subreddit and move to a hierarchy.
+
+SUBREDDIT-VECTOR is a vector of subreddit."
+  (mapcar #'rm:parse-subreddit-helper subreddit-vector))
 
 (defun rm:parse-comments-from-cache ()
   "Parse comment structures from cache data."
@@ -111,12 +175,26 @@ COMMENTS-VECTOR is a vector of comments."
   rm:comments-composite
   )
 
+(defun rm:parse-subreddit-from-cache ()
+  "Parse comment structures from cache data."
+  (setq rm:subreddit-composite nil)
+  (rm:parse-subreddit (list rm:cache-subreddit))
+  rm:subreddit-composite
+  )
+
 (defun rm:find-comment-by-name (name)
   "Given NAME, find the corresponding comment."
   (cl-find-if
    (lambda (comment)
      (equal name (cdr (assoc 'name comment))))
    rm:comments-composite))
+
+(defun rm:find-subreddit-post-by-name (name)
+  "Given NAME, find the corresponding subreddit-post."
+  (cl-find-if
+   (lambda (subreddit-post)
+     (equal name (cdr (assoc 'name subreddit-post))))
+   rm:subreddit-composite))
 
 (defvar rm:parentfn
   (lambda (name)
@@ -131,7 +209,13 @@ COMMENTS-VECTOR is a vector of comments."
         (if parent-id parent-id 'thread)))
     ))
 
+(defvar rm:subreddit-parentfn
+      (lambda (_)
+        'thread))
+
 (defvar rm:hierarchy (hierarchy-new))
+
+(defvar rm:subreddit-hierarchy (hierarchy-new))
 
 (defun rm:comments-unique-ids (comments)
   "Get the unique IDs from both parent and name slots.
@@ -158,11 +242,24 @@ the spot to do it as well."
     (cl-loop
      for comment in (rm:comments-unique-ids comments)
      do (progn
-          (print comment)
           (hierarchy-add-tree
            rm:hierarchy
            comment
            rm:parentfn))))
+  )
+
+(defun rm:subreddit-hierarchy-build ()
+  "Generate the subreddit-post structure."
+  (setq rm:subreddit-hierarchy (hierarchy-new))
+  (hierarchy-add-tree rm:subreddit-hierarchy 'thread rm:subreddit-parentfn)
+  (let ((subreddit-posts (rm:parse-subreddit-from-cache)))
+    (cl-loop
+     for subreddit-post in subreddit-posts
+     do (progn
+          (hierarchy-add-tree
+           rm:subreddit-hierarchy
+           subreddit-post
+           rm:subreddit-parentfn))))
   )
 
 ;; (defun rm:hierarchy-build ()
@@ -199,6 +296,7 @@ the spot to do it as well."
 ;;   (lambda (item _) (insert (symbol-name item)))))
 
 (defvar rm:hierarchy-labelfn-hooks nil)
+(defvar rm:subreddit-hierarchy-labelfn-hooks nil)
 
 (defun rm:hierarchy-labelfn-button (labelfn actionfn)
   "Return a function rendering LABELFN in a button.
@@ -217,6 +315,17 @@ return value of ACTIONFN is ignored."
        do (funcall fn item indent)))))
 
 (setq rm:hierarchy-labelfn-hooks
+      '(
+        (lambda (item indent)
+          (let ((comment (rm:find-comment-by-name item)))
+            (when comment
+              (insert
+               (format
+                " (%s) → %s\n"
+                (cdr (assoc 'score comment))
+                (cdr (assoc 'body comment)))))))))
+
+(setq rm:subreddit-hierarchy-labelfn-hooks
       '(
         (lambda (item indent)
           (let ((comment (rm:find-comment-by-name item)))
@@ -246,11 +355,31 @@ return value of ACTIONFN is ignored."
             )))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
+(defun rm:subreddit-show ()
+  "Show the subreddit-posts that were built in the structure."
+  (interactive)
+  (rm:subreddit-hierarchy-build)
+  (switch-to-buffer
+   (hierarchy-tree-display
+    rm:subreddit-hierarchy
+    (hierarchy-labelfn-indent
+     (rm:hierarchy-labelfn-button
+      (lambda (item _)
+        (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
+          (if subreddit-post
+              (insert
+               (format "%s"
+                       (cdr (assoc 'author subreddit-post))))
+            (insert (symbol-name item))
+            )))
+      (lambda (item _) (message "You clicked on: %s" item)))))))
+
 ;;;###autoload
 (defun redditor-mode ()
   "Invoke the main mode."
   (interactive)
-  (rm:fetch-comments))
+  ;; (rm:fetch-comments)
+  (rm:fetch-subreddit))
 
 (provide 'redditor-mode)
 ;;; redditor-mode.el ends here
