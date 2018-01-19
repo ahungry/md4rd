@@ -135,7 +135,10 @@ SUBREDDIT block is the nested list structure with them."
   (let* ((data (assoc 'data subreddit))
          (name (assoc 'permalink data))
          (permalink (assoc 'permalink data))
+         (num_comments (assoc 'num_comments data))
          (author (assoc 'author data))
+         (title (assoc 'title data))
+         (selftext (assoc 'selftext data))
          (score (assoc 'score data))
          (replies (assoc 'replies data))
          (children (assoc 'children data)))
@@ -144,7 +147,10 @@ SUBREDDIT block is the nested list structure with them."
              `(
                (name . ,(intern (cdr name)))
                ,permalink
+               ,num_comments
                ,author
+               ,title
+               ,selftext
                ,score)))
         (push composite rm:subreddit-composite)))
     (when children (rm:parse-subreddit (cdr children)))
@@ -210,8 +216,8 @@ SUBREDDIT-VECTOR is a vector of subreddit."
     ))
 
 (defvar rm:subreddit-parentfn
-      (lambda (_)
-        'thread))
+      (lambda (name)
+        (unless (equal name 'thread) 'thread)))
 
 (defvar rm:hierarchy (hierarchy-new))
 
@@ -256,10 +262,12 @@ the spot to do it as well."
     (cl-loop
      for subreddit-post in subreddit-posts
      do (progn
+          (print (cdr (assoc 'name subreddit-post)))
           (hierarchy-add-tree
            rm:subreddit-hierarchy
-           subreddit-post
-           rm:subreddit-parentfn))))
+           (cdr (assoc 'name subreddit-post))
+           rm:subreddit-parentfn)
+          )))
   )
 
 ;; (defun rm:hierarchy-build ()
@@ -314,31 +322,19 @@ return value of ACTIONFN is ignored."
        for fn in rm:hierarchy-labelfn-hooks
        do (funcall fn item indent)))))
 
-(setq rm:hierarchy-labelfn-hooks
-      '(
-        (lambda (item indent)
-          (let ((comment (rm:find-comment-by-name item)))
-            (when comment
-              (insert
-               (format
-                " (%s) → %s\n"
-                (cdr (assoc 'score comment))
-                (cdr (assoc 'body comment)))))))))
-
-(setq rm:subreddit-hierarchy-labelfn-hooks
-      '(
-        (lambda (item indent)
-          (let ((comment (rm:find-comment-by-name item)))
-            (when comment
-              (insert
-               (format
-                " (%s) → %s\n"
-                (cdr (assoc 'score comment))
-                (cdr (assoc 'body comment)))))))))
-
 (defun rm:comments-show ()
   "Show the comments that were built in the structure."
   (interactive)
+  (setq rm:hierarchy-labelfn-hooks
+        '(
+          (lambda (item indent)
+            (let ((comment (rm:find-comment-by-name item)))
+              (when comment
+                (insert
+                 (format
+                  " (%s) → %s\n"
+                  (cdr (assoc 'score comment))
+                  (cdr (assoc 'body comment)))))))))
   (rm:hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
@@ -358,6 +354,17 @@ return value of ACTIONFN is ignored."
 (defun rm:subreddit-show ()
   "Show the subreddit-posts that were built in the structure."
   (interactive)
+  (setq rm:hierarchy-labelfn-hooks
+        '(
+          (lambda (item indent)
+            (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
+              (when subreddit-post
+                (insert
+                 (format
+                  " (↑ %s / ☠ %s) by: %s"
+                  (cdr (assoc 'score subreddit-post))
+                  (cdr (assoc 'num_comments subreddit-post))
+                  (cdr (assoc 'author subreddit-post)))))))))
   (rm:subreddit-hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
@@ -369,10 +376,13 @@ return value of ACTIONFN is ignored."
           (if subreddit-post
               (insert
                (format "%s"
-                       (cdr (assoc 'author subreddit-post))))
+                       (cdr (assoc 'title subreddit-post))))
             (insert (symbol-name item))
             )))
-      (lambda (item _) (message "You clicked on: %s" item)))))))
+      (lambda (item _)
+        (setq rm:comment-url (format "http://reddit.com/%s.json" (symbol-name item)))
+        (rm:fetch-comments)
+        (message "Fetching: %s" rm:comment-url)))))))
 
 ;;;###autoload
 (defun redditor-mode ()
