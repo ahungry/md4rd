@@ -50,9 +50,9 @@ COMMENTS block is the nested list structure with them."
     (when (and name body parent_id)
       (let ((composite
              `(
-               (name . ,(make-symbol (cdr name)))
+               (name . ,(intern (cdr name)))
                ,body
-               (parent_id . ,(make-symbol (cdr parent_id))))))
+               (parent_id . ,(intern (cdr parent_id))))))
         (push composite rm:reddit-comments-composite)))
     (when children (rm:reddit-parse-comments (cdr children)))
     (when (and replies
@@ -85,7 +85,7 @@ COMMENTS-VECTOR is a vector of comments."
                    'parent_id
                    (cl-find-if
                     (lambda (comment)
-                      (string= name (cdr (assoc 'name comment))))
+                      (equal name (cdr (assoc 'name comment))))
                     rm:reddit-comments-composite)))))
         (if parent-id parent-id 'thread)))
     ))
@@ -99,17 +99,14 @@ COMMENTS should be the rm:reddit-comments-composite.
 
 If we want to date sort or something, this would probably be
 the spot to do it as well."
-  (mapcar #'make-symbol
-          (-uniq
-           (append
-            (mapcar #'symbol-name
-                    (cl-loop
-                     for c in comments
-                     collect (cdr (assoc 'name c))))
-            (mapcar #'symbol-name
-                    (cl-loop
-                     for c in comments
-                     collect (cdr (assoc 'parent_id c)))))))
+  (-uniq
+   (append
+    (cl-loop
+     for c in comments
+     collect (cdr (assoc 'name c)))
+    (cl-loop
+     for c in comments
+     collect (cdr (assoc 'parent_id c)))))
   )
 
 (defun rm:hierarchy-build ()
