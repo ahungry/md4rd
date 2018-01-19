@@ -41,32 +41,33 @@
 (defvar rm:version "0.0.1"
   "The current version of the mode.")
 
-(defvar rm:reddit-cache-comments nil
+(defvar rm:cache-comments nil
   "Store the most recent comment cache/fetch.")
 
-(defvar rm:reddit-comments-composite nil)
+(defvar rm:comments-composite nil)
 
-(defvar rm:reddit-fetch-comments-callback
+(defvar rm:fetch-comments-callback
   (cl-function
    (lambda (&rest data &allow-other-keys)
      "Callback for async, DATA is the response from request."
      (let ((data (cl-getf data :data)))
-       (setq rm:reddit-cache-comments data)
+       (setq rm:cache-comments data)
        (message "Fetch done.")
+       (rm:comments-show)
        ;; (print data)
        )))
   )
 
-(defun rm:reddit-fetch-comments ()
+(defun rm:fetch-comments ()
   "Get a list of the comments on a thread."
   (request-response-data
    (request "https://www.reddit.com/r/emacs/comments/7rbzqx/rms_please_help_proofreading_the_emacs_manual.json"
-            :complete rm:reddit-fetch-comments-callback
+            :complete rm:fetch-comments-callback
             :sync nil
             :parser 'json-read
             :headers `(("User-Agent" . "fun")))))
 
-(defun rm:reddit-parse-comments-helper (comments)
+(defun rm:parse-comments-helper (comments)
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
@@ -86,36 +87,36 @@ COMMENTS block is the nested list structure with them."
                ,author
                ,score
                (parent_id . ,(intern (cdr parent_id))))))
-        (push composite rm:reddit-comments-composite)))
-    (when children (rm:reddit-parse-comments (cdr children)))
+        (push composite rm:comments-composite)))
+    (when children (rm:parse-comments (cdr children)))
     (when (and replies
                (cdr replies)
                (listp (cdr replies)))
-      (rm:reddit-parse-comments-helper (cdr replies))
+      (rm:parse-comments-helper (cdr replies))
       )
     )
   )
 
-(defun rm:reddit-parse-comments (comments-vector)
+(defun rm:parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
 
 COMMENTS-VECTOR is a vector of comments."
-  (mapcar #'rm:reddit-parse-comments-helper comments-vector)
+  (mapcar #'rm:parse-comments-helper comments-vector)
   )
 
-(defun rm:reddit-parse-comments-from-cache ()
+(defun rm:parse-comments-from-cache ()
   "Parse comment structures from cache data."
-  (setq rm:reddit-comments-composite nil)
-  (rm:reddit-parse-comments rm:reddit-cache-comments)
-  rm:reddit-comments-composite
+  (setq rm:comments-composite nil)
+  (rm:parse-comments rm:cache-comments)
+  rm:comments-composite
   )
 
-(defun rm:reddit-find-comment-by-name (name)
+(defun rm:find-comment-by-name (name)
   "Given NAME, find the corresponding comment."
   (cl-find-if
    (lambda (comment)
      (equal name (cdr (assoc 'name comment))))
-   rm:reddit-comments-composite))
+   rm:comments-composite))
 
 (defvar rm:parentfn
   (lambda (name)
@@ -126,16 +127,16 @@ COMMENTS-VECTOR is a vector of comments."
                    (cl-find-if
                     (lambda (comment)
                       (equal name (cdr (assoc 'name comment))))
-                    rm:reddit-comments-composite)))))
+                    rm:comments-composite)))))
         (if parent-id parent-id 'thread)))
     ))
 
 (defvar rm:hierarchy (hierarchy-new))
 
-(defun rm:reddit-comments-unique-ids (comments)
+(defun rm:comments-unique-ids (comments)
   "Get the unique IDs from both parent and name slots.
 
-COMMENTS should be the rm:reddit-comments-composite.
+COMMENTS should be the rm:comments-composite.
 
 If we want to date sort or something, this would probably be
 the spot to do it as well."
@@ -153,9 +154,9 @@ the spot to do it as well."
   "Generate the comment structure."
   (setq rm:hierarchy (hierarchy-new))
   (hierarchy-add-tree rm:hierarchy 'thread rm:parentfn)
-  (let ((comments (rm:reddit-parse-comments-from-cache)))
+  (let ((comments (rm:parse-comments-from-cache)))
     (cl-loop
-     for comment in (rm:reddit-comments-unique-ids comments)
+     for comment in (rm:comments-unique-ids comments)
      do (progn
           (print comment)
           (hierarchy-add-tree
@@ -218,7 +219,7 @@ return value of ACTIONFN is ignored."
 (setq rm:hierarchy-labelfn-hooks
       '(
         (lambda (item indent)
-          (let ((comment (rm:reddit-find-comment-by-name item)))
+          (let ((comment (rm:find-comment-by-name item)))
             (when comment
               (insert
                (format
@@ -226,7 +227,7 @@ return value of ACTIONFN is ignored."
                 (cdr (assoc 'score comment))
                 (cdr (assoc 'body comment)))))))))
 
-(defun rm::comments-show ()
+(defun rm:comments-show ()
   "Show the comments that were built in the structure."
   (interactive)
   (rm:hierarchy-build)
@@ -236,7 +237,7 @@ return value of ACTIONFN is ignored."
     (hierarchy-labelfn-indent
      (rm:hierarchy-labelfn-button
       (lambda (item _)
-        (let ((comment (rm:reddit-find-comment-by-name item)))
+        (let ((comment (rm:find-comment-by-name item)))
           (if comment
               (insert
                (format "%s"
@@ -244,6 +245,12 @@ return value of ACTIONFN is ignored."
             (insert (symbol-name item))
             )))
       (lambda (item _) (message "You clicked on: %s" item)))))))
+
+;;;###autoload
+(defun redditor-mode ()
+  "Invoke the main mode."
+  (interactive)
+  (rm:fetch-comments))
 
 (provide 'redditor-mode)
 ;;; redditor-mode.el ends here
