@@ -8,6 +8,9 @@
 ;;; Code:
 
 (require 'hierarchy)
+(require 'cl-lib)
+(require 'dash)
+(require 'request)
 
 (defvar rm:reddit-cache-comments nil
   "Store the most recent comment cache/fetch.")
@@ -76,28 +79,52 @@ COMMENTS-VECTOR is a vector of comments."
 
 (defvar rm:parentfn
   (lambda (name)
-    (let ((parent-id
-           (cdr (assoc
-                 'parent_id
-                 (cl-find-if
-                  (lambda (comment)
-                    (string= name (cdr (assoc 'name comment))))
-                  rm:reddit-comments-composite)))))
-      (when parent-id (make-symbol parent-id)))
+    (unless (equal 'thread name)
+      (let ((parent-id
+             (cdr (assoc
+                   'parent_id
+                   (cl-find-if
+                    (lambda (comment)
+                      (string= name (cdr (assoc 'name comment))))
+                    rm:reddit-comments-composite)))))
+        (if parent-id parent-id 'thread)))
     ))
 
 (defvar rm:hierarchy (hierarchy-new))
 
+(defun rm:reddit-comments-unique-ids (comments)
+  "Get the unique IDs from both parent and name slots.
+
+COMMENTS should be the rm:reddit-comments-composite.
+
+If we want to date sort or something, this would probably be
+the spot to do it as well."
+  (mapcar #'make-symbol
+          (-uniq
+           (append
+            (mapcar #'symbol-name
+                    (cl-loop
+                     for c in comments
+                     collect (cdr (assoc 'name c))))
+            (mapcar #'symbol-name
+                    (cl-loop
+                     for c in comments
+                     collect (cdr (assoc 'parent_id c)))))))
+  )
+
 (defun rm:hierarchy-build ()
   "Generate the comment structure."
   (setq rm:hierarchy (hierarchy-new))
+  (hierarchy-add-tree rm:hierarchy 'thread rm:parentfn)
   (let ((comments (rm:reddit-parse-comments-from-cache)))
     (cl-loop
-     for comment in comments
-     do (hierarchy-add-tree
-         rm:hierarchy
-         (make-symbol (cdr (assoc 'name comment)))
-         rm:parentfn)))
+     for comment in (rm:reddit-comments-unique-ids comments)
+     do (progn
+          (print comment)
+          (hierarchy-add-tree
+           rm:hierarchy
+           comment
+           rm:parentfn))))
   )
 
 ;; (defun rm:hierarchy-build ()
