@@ -181,9 +181,13 @@ SUBREDDIT-VECTOR is a vector of subreddit."
   rm:comments-composite
   )
 
-(defun rm:parse-subreddit-from-cache ()
-  "Parse comment structures from cache data."
-  (setq rm:subreddit-composite nil)
+(defun rm:parse-subreddit-from-cache (subreddit)
+  "Parse comment structures from cache data.
+
+SUBREDDIT should be a valid subreddit."
+  (unless (assoc subreddit rm:subreddit-composite)
+    (push (cons subreddit nil) rm:subreddit-composite))
+  (setq (assoc subreddit rm:subreddit-composite) nil)
   (rm:parse-subreddit (list rm:cache-subreddit))
   rm:subreddit-composite
   )
@@ -215,9 +219,7 @@ SUBREDDIT-VECTOR is a vector of subreddit."
         (if parent-id parent-id 'thread)))
     ))
 
-(defvar rm:subreddit-parentfn
-      (lambda (name)
-        (unless (equal name 'thread) 'thread)))
+(defvar rm:subreddits-active '(emacs))
 
 (defvar rm:hierarchy (hierarchy-new))
 
@@ -254,20 +256,27 @@ the spot to do it as well."
            rm:parentfn))))
   )
 
+(defvar rm:subreddit-parentfn
+      (lambda (name)
+        (unless (equal name rm:subreddit-active) rm:subreddit-active)))
+
 (defun rm:subreddit-hierarchy-build ()
   "Generate the subreddit-post structure."
   (setq rm:subreddit-hierarchy (hierarchy-new))
-  (hierarchy-add-tree rm:subreddit-hierarchy 'thread rm:subreddit-parentfn)
-  (let ((subreddit-posts (rm:parse-subreddit-from-cache)))
-    (cl-loop
-     for subreddit-post in subreddit-posts
-     do (progn
-          (print (cdr (assoc 'name subreddit-post)))
-          (hierarchy-add-tree
-           rm:subreddit-hierarchy
-           (cdr (assoc 'name subreddit-post))
-           rm:subreddit-parentfn)
-          )))
+  (mapcar
+   (lambda (subreddit)
+     (hierarchy-add-tree rm:subreddit-hierarchy subreddit (lambda (_) nil))
+     (let ((subreddit-posts (rm:parse-subreddit-from-cache subreddit)))
+       (cl-loop
+        for subreddit-post in subreddit-posts
+        do (progn
+             (print (cdr (assoc 'name subreddit-post)))
+             (hierarchy-add-tree
+              rm:subreddit-hierarchy
+              (cdr (assoc 'name subreddit-post))
+              (lambda (_) subreddit))
+             ))))
+   rm:subreddits-active)
   )
 
 ;; (defun rm:hierarchy-build ()
