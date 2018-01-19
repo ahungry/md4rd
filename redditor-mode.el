@@ -45,6 +45,8 @@ COMMENTS block is the nested list structure with them."
          (name (assoc 'name data))
          (parent_id (assoc 'parent_id data))
          (body (assoc 'body data))
+         (author (assoc 'author data))
+         (score (assoc 'score data))
          (replies (assoc 'replies data))
          (children (assoc 'children data)))
     (when (and name body parent_id)
@@ -52,6 +54,8 @@ COMMENTS block is the nested list structure with them."
              `(
                (name . ,(intern (cdr name)))
                ,body
+               ,author
+               ,score
                (parent_id . ,(intern (cdr parent_id))))))
         (push composite rm:reddit-comments-composite)))
     (when children (rm:reddit-parse-comments (cdr children)))
@@ -76,6 +80,13 @@ COMMENTS-VECTOR is a vector of comments."
   (rm:reddit-parse-comments rm:reddit-cache-comments)
   rm:reddit-comments-composite
   )
+
+(defun rm:reddit-find-comment-by-name (name)
+  "Given NAME, find the corresponding comment."
+  (cl-find-if
+   (lambda (comment)
+     (equal name (cdr (assoc 'name comment))))
+   rm:reddit-comments-composite))
 
 (defvar rm:parentfn
   (lambda (name)
@@ -177,8 +188,14 @@ return value of ACTIONFN is ignored."
 
 (setq rm:hierarchy-labelfn-hooks
       '(
-       (lambda (item indent)
-         (insert (format "\n%s\n" (symbol-name item))))))
+        (lambda (item indent)
+          (let ((comment (rm:reddit-find-comment-by-name item)))
+            (when comment
+              (insert
+               (format
+                " (%s) → %s\n"
+                (cdr (assoc 'score comment))
+                (cdr (assoc 'body comment)))))))))
 
 (defun rm::comments-show ()
   "Show the comments that were built in the structure."
@@ -189,7 +206,14 @@ return value of ACTIONFN is ignored."
     rm:hierarchy
     (hierarchy-labelfn-indent
      (rm:hierarchy-labelfn-button
-      (lambda (item _) (insert (symbol-name item)))
+      (lambda (item _)
+        (let ((comment (rm:reddit-find-comment-by-name item)))
+          (if comment
+              (insert
+               (format "%s"
+                       (cdr (assoc 'author comment))))
+            (insert (symbol-name item))
+            )))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
 (provide 'redditor-mode)
