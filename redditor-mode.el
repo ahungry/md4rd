@@ -1,8 +1,34 @@
-;;; redditor-mode.el --- TBD. -*- lexical-binding: t; -*-
+;;; redditor-mode.el --- Browse reddit in Emacs. -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2018 Matthew Carter <m@ahungry.com>
+
+;; Author: Matthew Carter <m@ahungry.com>
+;; Maintainer: Matthew Carter <m@ahungry.com>
+;; URL: https://github.com/ahungry/color-theme-ahungry
+;; Version: 0.0.1
+;; Keywords: ahungry palette color theme emacs color-theme deftheme
+;; Package-Requires: ((emacs "25") (hierarchy "0") (request "0") (cl-lib "0") (dash "0"))
+
+;; This file is NOT part of GNU Emacs.
+
+;;; License:
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
-;; See a ref for hierarchy here:
+;; See a ref for hierarchy-mode here:
 ;; https://github.com/DamienCassou/hierarchy
 
 ;;; Code:
@@ -11,6 +37,9 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'request)
+
+(defvar rm:version "0.0.1"
+  "The current version of the mode.")
 
 (defvar rm:reddit-cache-comments nil
   "Store the most recent comment cache/fetch.")
