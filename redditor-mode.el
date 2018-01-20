@@ -59,9 +59,7 @@
      "Callback for async, DATA is the response from request."
      (let ((data (cl-getf data :data)))
        (setq rm:cache-comments data)
-       (rm:comments-show)
-       )))
-  )
+       (rm:comments-show)))))
 
 (defvar rm:fetch-subreddit-callback
   (cl-function
@@ -69,9 +67,7 @@
      "Callback for async, DATA is the response from request."
      (let ((my-data (cl-getf data :data)))
        (setf (gethash subreddit rm:cache-subreddit) my-data)
-       (rm:subreddit-show)
-       )))
-  )
+       (rm:subreddit-show)))))
 
 (defvar rm:subreddit-url
   "https://www.reddit.com/r/%s.json")
@@ -125,10 +121,7 @@ COMMENTS block is the nested list structure with them."
     (when (and replies
                (cdr replies)
                (listp (cdr replies)))
-      (rm:parse-comments-helper (cdr replies))
-      )
-    )
-  )
+      (rm:parse-comments-helper (cdr replies)))))
 
 (defun rm:parse-subreddit-helper (subreddit-post subreddit)
   "Parse the subreddit that were fetched.
@@ -155,16 +148,12 @@ SUBREDDIT block is the nested list structure with them."
                ,title
                ,selftext
                ,score)))
-        (push composite (gethash subreddit rm:subreddit-composite))
-        ))
+        (push composite (gethash subreddit rm:subreddit-composite))))
     (when children (rm:parse-subreddit (cdr children) subreddit))
     (when (and replies
                (cdr replies)
                (listp (cdr replies)))
-      (rm:parse-subreddit-helper (cdr replies) subreddit)
-      )
-    )
-  )
+      (rm:parse-subreddit-helper (cdr replies) subreddit))))
 
 (defun rm:parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
@@ -185,8 +174,7 @@ SUBREDDIT is the name of the subreddit."
   "Parse comment structures from cache data."
   (setq rm:comments-composite nil)
   (rm:parse-comments rm:cache-comments)
-  rm:comments-composite
-  )
+  rm:comments-composite)
 
 (defun rm:parse-subreddit-from-cache (subreddit)
   "Parse comment structures from cache data.
@@ -194,8 +182,7 @@ SUBREDDIT is the name of the subreddit."
 SUBREDDIT should be a valid subreddit."
   (setf (gethash subreddit rm:subreddit-composite) nil)
   (rm:parse-subreddit (list (gethash subreddit rm:cache-subreddit)) subreddit)
-  (gethash subreddit rm:subreddit-composite)
-  )
+  (gethash subreddit rm:subreddit-composite))
 
 (defun rm:find-comment-by-name (name)
   "Given NAME, find the corresponding comment."
@@ -228,8 +215,7 @@ SUBREDDIT should be a valid subreddit."
                     (lambda (comment)
                       (equal name (cdr (assoc 'name comment))))
                     rm:comments-composite)))))
-        (if parent-id parent-id 'thread)))
-    ))
+        (if parent-id parent-id 'thread)))))
 
 (defgroup redditor-mode nil
   "Redditor Mode customization group."
@@ -259,8 +245,7 @@ the spot to do it as well."
      collect (cdr (assoc 'name c)))
     (cl-loop
      for c in comments
-     collect (cdr (assoc 'parent_id c)))))
-  )
+     collect (cdr (assoc 'parent_id c))))))
 
 (defun rm:hierarchy-build ()
   "Generate the comment structure."
@@ -273,8 +258,7 @@ the spot to do it as well."
           (hierarchy-add-tree
            rm:hierarchy
            comment
-           rm:parentfn))))
-  )
+           rm:parentfn)))))
 
 (defun rm:subreddit-hierarchy-build ()
   "Generate the subreddit-post structure."
@@ -290,10 +274,8 @@ the spot to do it as well."
              (hierarchy-add-tree
               rm:subreddit-hierarchy
               (cdr (assoc 'name subreddit-post))
-              (lambda (_) subreddit))
-             ))))
-   rm::subreddits-active)
-  )
+              (lambda (_) subreddit))))))
+   rm::subreddits-active))
 
 ;; (defun rm:hierarchy-build ()
 ;;   "Generate the comment structure."
@@ -372,8 +354,7 @@ return value of ACTIONFN is ignored."
               (insert
                (format "%s"
                        (cdr (assoc 'author comment))))
-            (insert (symbol-name item))
-            )))
+            (insert (symbol-name item)))))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
 (defun rm:subreddit-show ()
@@ -402,8 +383,7 @@ return value of ACTIONFN is ignored."
               (insert
                (format "%s"
                        (cdr (assoc 'title subreddit-post))))
-            (insert (symbol-name item))
-            )))
+            (insert (symbol-name item)))))
       (lambda (item _)
         (setq rm:comment-url (format "http://reddit.com/%s.json" (symbol-name item)))
         (rm:fetch-comments)
