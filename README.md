@@ -28,8 +28,8 @@ the `+` concatenation).
 
 See the following (shown in `emacs -nw` mode):
 
-![subreddit](https://raw.githubusercontent.com/ahungry/redditor-mode/master/redditor-mode-1.png)
-![comments](https://raw.githubusercontent.com/ahungry/redditor-mode/master/redditor-mode-2.png)
+![subreddit](https://raw.githubusercontent.com/ahungry/redditor-mode/master/img/redditor-mode-1.png)
+![comments](https://raw.githubusercontent.com/ahungry/redditor-mode/master/img/redditor-mode-2.png)
 
 # todo
 

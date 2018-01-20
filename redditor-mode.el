@@ -59,8 +59,6 @@
      "Callback for async, DATA is the response from request."
      (let ((data (cl-getf data :data)))
        (setq rm:cache-comments data)
-       (print rm:cache-comments)
-       (message "rm: Comment fetch complete.")
        (rm:comments-show)
        )))
   )
@@ -71,7 +69,6 @@
      "Callback for async, DATA is the response from request."
      (let ((my-data (cl-getf data :data)))
        (setf (gethash subreddit rm:cache-subreddit) my-data)
-       (message "rm: Subreddit fetch complete.")
        (rm:subreddit-show)
        )))
   )
@@ -93,7 +90,6 @@
 
 (defun rm:fetch-subreddit (subreddit)
   "Get a list of the SUBREDDIT on a thread."
-  (message (format  "FETCH: %s" subreddit))
   (request-response-data
    (request (format rm:subreddit-url subreddit)
             :complete
@@ -286,13 +282,11 @@ the spot to do it as well."
   (hierarchy-add-tree rm:subreddit-hierarchy 'subs (lambda (_) nil))
   (mapcar
    (lambda (subreddit)
-     (message (symbol-name subreddit))
      (hierarchy-add-tree rm:subreddit-hierarchy subreddit (lambda (_) 'subs))
      (let ((subreddit-posts (rm:parse-subreddit-from-cache subreddit)))
        (cl-loop
         for subreddit-post in subreddit-posts
         do (progn
-             (print (cdr (assoc 'name subreddit-post)))
              (hierarchy-add-tree
               rm:subreddit-hierarchy
               (cdr (assoc 'name subreddit-post))
@@ -403,8 +397,6 @@ return value of ACTIONFN is ignored."
     (hierarchy-labelfn-indent
      (rm:hierarchy-labelfn-button
       (lambda (item _)
-        (print (symbol-name item))
-        (print "SENTINEL")
         (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
           (if subreddit-post
               (insert
