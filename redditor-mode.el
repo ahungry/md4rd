@@ -99,56 +99,38 @@
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
-  (let* ((data (assoc 'data comments))
-         (name (assoc 'name data))
-         (parent_id (assoc 'parent_id data))
-         (body (assoc 'body data))
-         (author (assoc 'author data))
-         (score (assoc 'score data))
-         (replies (assoc 'replies data))
-         (children (assoc 'children data)))
-    (when (and name body parent_id)
-      (let ((composite `((name . ,(intern (cdr name)))
-                         ,body
-                         ,author
-                         ,score
-                         (parent_id . ,(intern (cdr parent_id))))))
+  (let-alist (cdr (assoc 'data comments))
+    (when (and .name .body .parent_id)
+      (let ((composite (list (cons 'name (intern .name))
+                             (cons 'body   .body)
+                             (cons 'author .author)
+                             (cons 'score  .score)
+                             (cons 'parent_id (intern .parent_id)))))
         (push composite rm:comments-composite)))
-    (when children (rm:parse-comments (cdr children)))
-    (when (and replies
-               (cdr replies)
-               (listp (cdr replies)))
-      (rm:parse-comments-helper (cdr replies)))))
+    (when .children (rm:parse-comments .children))
+    (when (and .replies
+               (listp .replies))
+      (rm:parse-comments-helper .replies))))
 
 (defun rm:parse-subreddit-helper (subreddit-post subreddit)
   "Parse the subreddit that were fetched.
 
 SUBREDDIT-POST is the actual post data submitted.
 SUBREDDIT block is the nested list structure with them."
-  (let* ((data (assoc 'data subreddit-post))
-         (name (assoc 'permalink data))
-         (permalink (assoc 'permalink data))
-         (num_comments (assoc 'num_comments data))
-         (author (assoc 'author data))
-         (title (assoc 'title data))
-         (selftext (assoc 'selftext data))
-         (score (assoc 'score data))
-         (replies (assoc 'replies data))
-         (children (assoc 'children data)))
-    (when (and name permalink)
-      (let ((composite `((name . ,(intern (cdr name)))
-                         ,permalink
-                         ,num_comments
-                         ,author
-                         ,title
-                         ,selftext
-                         ,score)))
+  (let-alist (cdr (assoc 'data subreddit-post))
+    (when (and .name .permalink)
+      (let ((composite (list (cons 'name (intern .name))
+                             (cons 'permalink    .permalink)
+                             (cons 'num_comments .num_comments)
+                             (cons 'author       .author)
+                             (cons 'title        .title)
+                             (cons 'selftext     .selftext)
+                             (cons 'score        .score))))
         (push composite (gethash subreddit rm:subreddit-composite))))
-    (when children (rm:parse-subreddit (cdr children) subreddit))
-    (when (and replies
-               (cdr replies)
-               (listp (cdr replies)))
-      (rm:parse-subreddit-helper (cdr replies) subreddit))))
+    (when .children (rm:parse-subreddit .children subreddit))
+    (when (and .replies
+               (listp .replies))
+      (rm:parse-subreddit-helper .replies subreddit))))
 
 (defun rm:parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
@@ -331,11 +313,10 @@ return value of ACTIONFN is ignored."
         '((lambda (item indent)
             (let ((comment (rm:find-comment-by-name item)))
               (when comment
-                (insert
-                 (format
-                  " (%s) → %s\n"
-                  (cdr (assoc 'score comment))
-                  (cdr (assoc 'body comment)))))))))
+                (let-alist comment
+                  (insert
+                   (format " (%s) → %s\n"
+                           .score .body))))))))
   (rm:hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
@@ -358,12 +339,10 @@ return value of ACTIONFN is ignored."
         '((lambda (item indent)
             (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
               (when subreddit-post
-                (insert
-                 (format
-                  " (↑ %s / ☠ %s) by: %s"
-                  (cdr (assoc 'score subreddit-post))
-                  (cdr (assoc 'num_comments subreddit-post))
-                  (cdr (assoc 'author subreddit-post)))))))))
+                (let-alist subreddit-post
+                  (insert
+                   (format " (↑ %s / ☠ %s) by: %s"
+                           .score .num_comments .author))))))))
   (rm:subreddit-hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
