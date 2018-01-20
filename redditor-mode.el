@@ -99,7 +99,7 @@
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
-  (let-alist (cdr (assoc 'data comments))
+  (let-alist (alist-get 'data comments)
     (when (and .name .body .parent_id)
       (let ((composite (list (cons 'name (intern .name))
                              (cons 'body   .body)
@@ -117,7 +117,7 @@ COMMENTS block is the nested list structure with them."
 
 SUBREDDIT-POST is the actual post data submitted.
 SUBREDDIT block is the nested list structure with them."
-  (let-alist (cdr (assoc 'data subreddit-post))
+  (let-alist (alist-get 'data subreddit-post)
     (when (and .name .permalink)
       (let ((composite (list (cons 'name (intern .name))
                              (cons 'permalink    .permalink)
@@ -165,7 +165,7 @@ SUBREDDIT should be a valid subreddit."
   "Given NAME, find the corresponding comment."
   (cl-find-if
    (lambda (comment)
-     (equal name (cdr (assoc 'name comment))))
+     (equal name (alist-get 'name comment)))
    rm:comments-composite))
 
 (defun rm:find-subreddit-post-by-name (name)
@@ -176,7 +176,7 @@ SUBREDDIT should be a valid subreddit."
        (let ((post-find
               (cl-find-if
                (lambda (subreddit-post)
-                 (equal name (cdr (assoc 'name subreddit-post))))
+                 (equal name (alist-get 'name subreddit-post)))
                hash-value)))
          (when post-find (setq found post-find))))
      rm:subreddit-composite)
@@ -186,12 +186,12 @@ SUBREDDIT should be a valid subreddit."
   (lambda (name)
     (unless (equal 'thread name)
       (let ((parent-id
-             (cdr (assoc
-                   'parent_id
-                   (cl-find-if
-                    (lambda (comment)
-                      (equal name (cdr (assoc 'name comment))))
-                    rm:comments-composite)))))
+             (alist-get
+              'parent_id
+              (cl-find-if
+               (lambda (comment)
+                 (equal name (alist-get 'name comment)))
+               rm:comments-composite))))
         (if parent-id parent-id 'thread)))))
 
 (defgroup redditor-mode nil
@@ -219,10 +219,10 @@ the spot to do it as well."
    (append
     (cl-loop
      for c in comments
-     collect (cdr (assoc 'name c)))
+     collect (alist-get 'name c))
     (cl-loop
      for c in comments
-     collect (cdr (assoc 'parent_id c))))))
+     collect (alist-get 'parent_id c)))))
 
 (defun rm:hierarchy-build ()
   "Generate the comment structure."
@@ -250,7 +250,7 @@ the spot to do it as well."
         do (progn
              (hierarchy-add-tree
               rm:subreddit-hierarchy
-              (cdr (assoc 'name subreddit-post))
+              (alist-get 'name subreddit-post)
               (lambda (_) subreddit))))))
    rm::subreddits-active))
 
@@ -328,7 +328,7 @@ return value of ACTIONFN is ignored."
           (if comment
               (insert
                (format "%s"
-                       (cdr (assoc 'author comment))))
+                       (alist-get 'author comment)))
             (insert (symbol-name item)))))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
@@ -354,7 +354,7 @@ return value of ACTIONFN is ignored."
           (if subreddit-post
               (insert
                (format "%s"
-                       (cdr (assoc 'title subreddit-post))))
+                       (alist-get 'title subreddit-post)))
             (insert (symbol-name item)))))
       (lambda (item _)
         (setq rm:comment-url (format "http://reddit.com/%s.json" (symbol-name item)))
