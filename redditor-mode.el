@@ -37,6 +37,7 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'request)
+(require 'json)
 
 (defvar rm:version "0.0.1"
   "The current version of the mode.")
@@ -85,7 +86,7 @@
    (request rm:comment-url
             :complete rm:fetch-comments-callback
             :sync nil
-            :parser 'json-read
+            :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
 
 (defun rm:fetch-subreddit (subreddit)
@@ -97,7 +98,7 @@
              (lambda (&rest data &allow-other-keys)
                (apply rm:fetch-subreddit-callback subreddit data)))
             :sync nil
-            :parser 'json-read
+            :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
 
 (defun rm:parse-comments-helper (comments)
