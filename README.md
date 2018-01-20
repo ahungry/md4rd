@@ -12,6 +12,18 @@ Clone the repo, then in your Emacs init file:
 (redditor-mode) ;; to launch it
 ```
 
+# Customization
+
+You can subscribe to different reddits by customizing your
+rm::subreddits-active variable.
+
+```
+(setq subreddits-active '(lisp+Common_Lisp emacs prolog)
+```
+
+(A cool feature of reddit is you can view multiple reddits combined with
+the `+` concatenation).
+
 # Screenshots
 
 See the following (shown in `emacs -nw` mode):

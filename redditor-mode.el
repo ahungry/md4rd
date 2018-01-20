@@ -239,7 +239,7 @@ SUBREDDIT should be a valid subreddit."
   "Redditor Mode customization group."
   :group 'applications)
 
-(defcustom rm:subreddits-active
+(defcustom rm::subreddits-active
   '(emacs lisp+Common_Lisp prolog)
   "List of subreddits you would like to subscribe to."
   :group 'redditor-mode
@@ -298,7 +298,7 @@ the spot to do it as well."
               (cdr (assoc 'name subreddit-post))
               (lambda (_) subreddit))
              ))))
-   rm:subreddits-active)
+   rm::subreddits-active)
   )
 
 ;; (defun rm:hierarchy-build ()
@@ -422,7 +422,7 @@ return value of ACTIONFN is ignored."
   "Invoke the main mode."
   (interactive)
   ;; (rm:fetch-comments)
-  (mapcar #'rm:fetch-subreddit rm:subreddits-active))
+  (mapcar #'rm:fetch-subreddit rm::subreddits-active))
 
 (provide 'redditor-mode)
 ;;; redditor-mode.el ends here
