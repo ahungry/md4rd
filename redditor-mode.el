@@ -72,8 +72,7 @@
 (defvar rm:subreddit-url
   "https://www.reddit.com/r/%s.json")
 
-(defvar rm:comment-url
-  "https://www.reddit.com/r/emacs/comments/7rbzqx/rms_please_help_proofreading_the_emacs_manual.json")
+(defvar rm:comment-url nil)
 
 (defun rm:fetch-comments ()
   "Get a list of the comments on a thread."
@@ -109,13 +108,11 @@ COMMENTS block is the nested list structure with them."
          (replies (assoc 'replies data))
          (children (assoc 'children data)))
     (when (and name body parent_id)
-      (let ((composite
-             `(
-               (name . ,(intern (cdr name)))
-               ,body
-               ,author
-               ,score
-               (parent_id . ,(intern (cdr parent_id))))))
+      (let ((composite `((name . ,(intern (cdr name)))
+                         ,body
+                         ,author
+                         ,score
+                         (parent_id . ,(intern (cdr parent_id))))))
         (push composite rm:comments-composite)))
     (when children (rm:parse-comments (cdr children)))
     (when (and replies
@@ -139,15 +136,13 @@ SUBREDDIT block is the nested list structure with them."
          (replies (assoc 'replies data))
          (children (assoc 'children data)))
     (when (and name permalink)
-      (let ((composite
-             `(
-               (name . ,(intern (cdr name)))
-               ,permalink
-               ,num_comments
-               ,author
-               ,title
-               ,selftext
-               ,score)))
+      (let ((composite `((name . ,(intern (cdr name)))
+                         ,permalink
+                         ,num_comments
+                         ,author
+                         ,title
+                         ,selftext
+                         ,score)))
         (push composite (gethash subreddit rm:subreddit-composite))))
     (when children (rm:parse-subreddit (cdr children) subreddit))
     (when (and replies
@@ -333,8 +328,7 @@ return value of ACTIONFN is ignored."
   "Show the comments that were built in the structure."
   (interactive)
   (setq rm:hierarchy-labelfn-hooks
-        '(
-          (lambda (item indent)
+        '((lambda (item indent)
             (let ((comment (rm:find-comment-by-name item)))
               (when comment
                 (insert
@@ -361,8 +355,7 @@ return value of ACTIONFN is ignored."
   "Show the subreddit-posts that were built in the structure."
   (interactive)
   (setq rm:hierarchy-labelfn-hooks
-        '(
-          (lambda (item indent)
+        '((lambda (item indent)
             (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
               (when subreddit-post
                 (insert
