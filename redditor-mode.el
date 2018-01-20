@@ -44,11 +44,14 @@
 (defvar rm:cache-comments nil
   "Store the most recent comment cache/fetch.")
 
-(defvar rm:cache-subreddit nil
+(defvar rm:cache-subreddit
+  (make-hash-table :test #'equal)
   "Store the most recent comment cache/fetch.")
 
 (defvar rm:comments-composite nil)
-(defvar rm:subreddit-composite nil)
+
+(defvar rm:subreddit-composite
+  (make-hash-table :test #'equal))
 
 (defvar rm:fetch-comments-callback
   (cl-function
@@ -64,18 +67,17 @@
 
 (defvar rm:fetch-subreddit-callback
   (cl-function
-   (lambda (&rest data &allow-other-keys)
+   (lambda (subreddit &rest data &allow-other-keys)
      "Callback for async, DATA is the response from request."
-     (let ((data (cl-getf data :data)))
-       (setq rm:cache-subreddit data)
-       (print rm:cache-subreddit)
+     (let ((my-data (cl-getf data :data)))
+       (setf (gethash subreddit rm:cache-subreddit) my-data)
        (message "rm: Subreddit fetch complete.")
        (rm:subreddit-show)
        )))
   )
 
 (defvar rm:subreddit-url
-  "https://www.reddit.com/r/emacs.json")
+  "https://www.reddit.com/r/%s.json")
 
 (defvar rm:comment-url
   "https://www.reddit.com/r/emacs/comments/7rbzqx/rms_please_help_proofreading_the_emacs_manual.json")
@@ -89,11 +91,15 @@
             :parser 'json-read
             :headers `(("User-Agent" . "fun")))))
 
-(defun rm:fetch-subreddit ()
-  "Get a list of the subreddit on a thread."
+(defun rm:fetch-subreddit (subreddit)
+  "Get a list of the SUBREDDIT on a thread."
+  (message (format  "FETCH: %s" subreddit))
   (request-response-data
-   (request rm:subreddit-url
-            :complete rm:fetch-subreddit-callback
+   (request (format rm:subreddit-url subreddit)
+            :complete
+            (cl-function
+             (lambda (&rest data &allow-other-keys)
+               (apply rm:fetch-subreddit-callback subreddit data)))
             :sync nil
             :parser 'json-read
             :headers `(("User-Agent" . "fun")))))
@@ -128,11 +134,12 @@ COMMENTS block is the nested list structure with them."
     )
   )
 
-(defun rm:parse-subreddit-helper (subreddit)
+(defun rm:parse-subreddit-helper (subreddit-post subreddit)
   "Parse the subreddit that were fetched.
 
+SUBREDDIT-POST is the actual post data submitted.
 SUBREDDIT block is the nested list structure with them."
-  (let* ((data (assoc 'data subreddit))
+  (let* ((data (assoc 'data subreddit-post))
          (name (assoc 'permalink data))
          (permalink (assoc 'permalink data))
          (num_comments (assoc 'num_comments data))
@@ -152,12 +159,13 @@ SUBREDDIT block is the nested list structure with them."
                ,title
                ,selftext
                ,score)))
-        (push composite rm:subreddit-composite)))
-    (when children (rm:parse-subreddit (cdr children)))
+        (push composite (gethash subreddit rm:subreddit-composite))
+        ))
+    (when children (rm:parse-subreddit (cdr children) subreddit))
     (when (and replies
                (cdr replies)
                (listp (cdr replies)))
-      (rm:parse-subreddit-helper (cdr replies))
+      (rm:parse-subreddit-helper (cdr replies) subreddit)
       )
     )
   )
@@ -168,11 +176,14 @@ SUBREDDIT block is the nested list structure with them."
 COMMENTS-VECTOR is a vector of comments."
   (mapcar #'rm:parse-comments-helper comments-vector))
 
-(defun rm:parse-subreddit (subreddit-vector)
+(defun rm:parse-subreddit (subreddit-vector subreddit)
   "Parse the cached subreddit and move to a hierarchy.
 
-SUBREDDIT-VECTOR is a vector of subreddit."
-  (mapcar #'rm:parse-subreddit-helper subreddit-vector))
+SUBREDDIT-VECTOR is a vector of subreddit.
+SUBREDDIT is the name of the subreddit."
+  (mapcar (lambda (sub)
+            (rm:parse-subreddit-helper sub subreddit))
+          subreddit-vector))
 
 (defun rm:parse-comments-from-cache ()
   "Parse comment structures from cache data."
@@ -185,11 +196,9 @@ SUBREDDIT-VECTOR is a vector of subreddit."
   "Parse comment structures from cache data.
 
 SUBREDDIT should be a valid subreddit."
-  (unless (assoc subreddit rm:subreddit-composite)
-    (push (cons subreddit nil) rm:subreddit-composite))
-  (setq (assoc subreddit rm:subreddit-composite) nil)
-  (rm:parse-subreddit (list rm:cache-subreddit))
-  rm:subreddit-composite
+  (setf (gethash subreddit rm:subreddit-composite) nil)
+  (rm:parse-subreddit (list (gethash subreddit rm:cache-subreddit)) subreddit)
+  (gethash subreddit rm:subreddit-composite)
   )
 
 (defun rm:find-comment-by-name (name)
@@ -201,10 +210,17 @@ SUBREDDIT should be a valid subreddit."
 
 (defun rm:find-subreddit-post-by-name (name)
   "Given NAME, find the corresponding subreddit-post."
-  (cl-find-if
-   (lambda (subreddit-post)
-     (equal name (cdr (assoc 'name subreddit-post))))
-   rm:subreddit-composite))
+  (let ((found nil))
+    (maphash
+     (lambda (_ hash-value)
+       (let ((post-find
+              (cl-find-if
+               (lambda (subreddit-post)
+                 (equal name (cdr (assoc 'name subreddit-post))))
+               hash-value)))
+         (when post-find (setq found post-find))))
+     rm:subreddit-composite)
+    found))
 
 (defvar rm:parentfn
   (lambda (name)
@@ -219,7 +235,15 @@ SUBREDDIT should be a valid subreddit."
         (if parent-id parent-id 'thread)))
     ))
 
-(defvar rm:subreddits-active '(emacs))
+(defgroup redditor-mode nil
+  "Redditor Mode customization group."
+  :group 'applications)
+
+(defcustom rm:subreddits-active
+  '(emacs lisp+Common_Lisp prolog)
+  "List of subreddits you would like to subscribe to."
+  :group 'redditor-mode
+  :type (list 'symbol))
 
 (defvar rm:hierarchy (hierarchy-new))
 
@@ -256,16 +280,14 @@ the spot to do it as well."
            rm:parentfn))))
   )
 
-(defvar rm:subreddit-parentfn
-      (lambda (name)
-        (unless (equal name rm:subreddit-active) rm:subreddit-active)))
-
 (defun rm:subreddit-hierarchy-build ()
   "Generate the subreddit-post structure."
   (setq rm:subreddit-hierarchy (hierarchy-new))
+  (hierarchy-add-tree rm:subreddit-hierarchy 'subs (lambda (_) nil))
   (mapcar
    (lambda (subreddit)
-     (hierarchy-add-tree rm:subreddit-hierarchy subreddit (lambda (_) nil))
+     (message (symbol-name subreddit))
+     (hierarchy-add-tree rm:subreddit-hierarchy subreddit (lambda (_) 'subs))
      (let ((subreddit-posts (rm:parse-subreddit-from-cache subreddit)))
        (cl-loop
         for subreddit-post in subreddit-posts
@@ -381,6 +403,8 @@ return value of ACTIONFN is ignored."
     (hierarchy-labelfn-indent
      (rm:hierarchy-labelfn-button
       (lambda (item _)
+        (print (symbol-name item))
+        (print "SENTINEL")
         (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
           (if subreddit-post
               (insert
@@ -398,7 +422,7 @@ return value of ACTIONFN is ignored."
   "Invoke the main mode."
   (interactive)
   ;; (rm:fetch-comments)
-  (rm:fetch-subreddit))
+  (mapcar #'rm:fetch-subreddit rm:subreddits-active))
 
 (provide 'redditor-mode)
 ;;; redditor-mode.el ends here
