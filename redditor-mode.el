@@ -248,7 +248,7 @@ SUBREDDIT should be a valid subreddit."
 (defun rm:comments-unique-ids (comments)
   "Get the unique IDs from both parent and name slots.
 
-COMMENTS should be the rm:comments-composite.
+COMMENTS should be the ‘rm:comments-composite’.
 
 If we want to date sort or something, this would probably be
 the spot to do it as well."
