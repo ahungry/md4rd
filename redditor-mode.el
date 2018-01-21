@@ -7,7 +7,7 @@
 ;; URL: https://github.com/ahungry/color-theme-ahungry
 ;; Version: 0.0.1
 ;; Keywords: ahungry palette color theme emacs color-theme deftheme
-;; Package-Requires: ((emacs "25") (hierarchy "0") (request "0") (cl-lib "0") (dash "0"))
+;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0") (dash "2.13.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -254,39 +254,6 @@ the spot to do it as well."
               (alist-get 'name subreddit-post)
               (lambda (_) subreddit))))))
    rm::subreddits-active))
-
-;; (defun rm:hierarchy-build ()
-;;   "Generate the comment structure."
-;;   (let ((parentfn
-;;          (lambda (item)
-;;            (cl-case item
-;;              (dove 'bird)
-;;              (pigeon 'bird)
-;;              (bird 'animal)
-;;              (dolphin 'animal)
-;;              (cow 'animal)))))
-;;     (hierarchy-add-tree rm:hierarchy 'dove parentfn)
-;;     (hierarchy-add-tree rm:hierarchy 'pigeon parentfn)
-;;     (hierarchy-add-tree rm:hierarchy 'dolphin parentfn)
-;;     (hierarchy-add-tree rm:hierarchy 'cow parentfn)
-;;     ))
-
-;; (hierarchy-sort animals)
-;; (hierarchy-roots animals)
-;; (hierarchy-leafs animals)
-
-;; (switch-to-buffer
-;;  (hierarchy-tabulated-display
-;;   animals
-;;   (hierarchy-labelfn-indent
-;;    (hierarchy-labelfn-button
-;;     (lambda (item _) (insert (symbol-name item)))
-;;     (lambda (item _) (message "You clicked on: %s" item))))))
-
-;; (switch-to-buffer
-;;  (hierarchy-tree-display
-;;   animals
-;;   (lambda (item _) (insert (symbol-name item)))))
 
 (defvar rm:hierarchy-labelfn-hooks nil)
 (defvar rm:subreddit-hierarchy-labelfn-hooks nil)
