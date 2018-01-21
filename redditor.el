@@ -1,4 +1,4 @@
-;;; redditor-mode.el --- Browse reddit in Emacs. -*- lexical-binding: t; -*-
+;;; redditor.el --- Browse reddit. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2018 Matthew Carter <m@ahungry.com>
 
@@ -6,8 +6,8 @@
 ;; Maintainer: Matthew Carter <m@ahungry.com>
 ;; URL: https://github.com/ahungry/color-theme-ahungry
 ;; Version: 0.0.1
-;; Keywords: ahungry palette color theme emacs color-theme deftheme
-;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0") (dash "2.13.0"))
+;; Keywords: ahungry reddit browse news
+;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -39,64 +39,64 @@
 (require 'request)
 (require 'json)
 
-(defvar redditor-mode--version "0.0.1"
+(defvar redditor--version "0.0.1"
   "The current version of the mode.")
 
-(defvar redditor-mode--cache-comments nil
+(defvar redditor--cache-comments nil
   "Store the most recent comment cache/fetch.")
 
-(defvar redditor-mode--cache-subreddit
+(defvar redditor--cache-subreddit
   (make-hash-table :test #'equal)
   "Store the most recent comment cache/fetch.")
 
-(defvar redditor-mode--comments-composite nil)
+(defvar redditor--comments-composite nil)
 
-(defvar redditor-mode--subreddit-composite
+(defvar redditor--subreddit-composite
   (make-hash-table :test #'equal))
 
-(defvar redditor-mode--fetch-comments-callback
+(defvar redditor--fetch-comments-callback
   (cl-function
    (lambda (&rest data &allow-other-keys)
      "Callback for async, DATA is the response from request."
      (let ((data (cl-getf data :data)))
-       (setq redditor-mode--cache-comments data)
-       (redditor-mode--comments-show)))))
+       (setq redditor--cache-comments data)
+       (redditor--comments-show)))))
 
-(defvar redditor-mode--fetch-subreddit-callback
+(defvar redditor--fetch-subreddit-callback
   (cl-function
    (lambda (subreddit &rest data &allow-other-keys)
      "Callback for async, DATA is the response from request."
      (let ((my-data (cl-getf data :data)))
-       (setf (gethash subreddit redditor-mode--cache-subreddit) my-data)
-       (redditor-mode--subreddit-show)))))
+       (setf (gethash subreddit redditor--cache-subreddit) my-data)
+       (redditor--subreddit-show)))))
 
-(defvar redditor-mode--subreddit-url
+(defvar redditor--subreddit-url
   "https://www.reddit.com/r/%s.json")
 
-(defvar redditor-mode--comment-url nil)
+(defvar redditor--comment-url nil)
 
-(defun redditor-mode--fetch-comments ()
+(defun redditor--fetch-comments ()
   "Get a list of the comments on a thread."
   (request-response-data
-   (request redditor-mode--comment-url
-            :complete redditor-mode--fetch-comments-callback
+   (request redditor--comment-url
+            :complete redditor--fetch-comments-callback
             :sync nil
             :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
 
-(defun redditor-mode--fetch-subreddit (subreddit)
+(defun redditor--fetch-subreddit (subreddit)
   "Get a list of the SUBREDDIT on a thread."
   (request-response-data
-   (request (format redditor-mode--subreddit-url subreddit)
+   (request (format redditor--subreddit-url subreddit)
             :complete
             (cl-function
              (lambda (&rest data &allow-other-keys)
-               (apply redditor-mode--fetch-subreddit-callback subreddit data)))
+               (apply redditor--fetch-subreddit-callback subreddit data)))
             :sync nil
             :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
 
-(defun redditor-mode--parse-comments-helper (comments)
+(defun redditor--parse-comments-helper (comments)
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
@@ -107,13 +107,13 @@ COMMENTS block is the nested list structure with them."
                              (cons 'author .author)
                              (cons 'score  .score)
                              (cons 'parent_id (intern .parent_id)))))
-        (push composite redditor-mode--comments-composite)))
-    (when .children (redditor-mode--parse-comments .children))
+        (push composite redditor--comments-composite)))
+    (when .children (redditor--parse-comments .children))
     (when (and .replies
                (listp .replies))
-      (redditor-mode--parse-comments-helper .replies))))
+      (redditor--parse-comments-helper .replies))))
 
-(defun redditor-mode--parse-subreddit-helper (subreddit-post subreddit)
+(defun redditor--parse-subreddit-helper (subreddit-post subreddit)
   "Parse the subreddit that were fetched.
 
 SUBREDDIT-POST is the actual post data submitted.
@@ -127,49 +127,49 @@ SUBREDDIT block is the nested list structure with them."
                              (cons 'title        .title)
                              (cons 'selftext     .selftext)
                              (cons 'score        .score))))
-        (push composite (gethash subreddit redditor-mode--subreddit-composite))))
-    (when .children (redditor-mode--parse-subreddit .children subreddit))
+        (push composite (gethash subreddit redditor--subreddit-composite))))
+    (when .children (redditor--parse-subreddit .children subreddit))
     (when (and .replies
                (listp .replies))
-      (redditor-mode--parse-subreddit-helper .replies subreddit))))
+      (redditor--parse-subreddit-helper .replies subreddit))))
 
-(defun redditor-mode--parse-comments (comments-vector)
+(defun redditor--parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
 
 COMMENTS-VECTOR is a vector of comments."
-  (mapcar #'redditor-mode--parse-comments-helper comments-vector))
+  (mapcar #'redditor--parse-comments-helper comments-vector))
 
-(defun redditor-mode--parse-subreddit (subreddit-vector subreddit)
+(defun redditor--parse-subreddit (subreddit-vector subreddit)
   "Parse the cached subreddit and move to a hierarchy.
 
 SUBREDDIT-VECTOR is a vector of subreddit.
 SUBREDDIT is the name of the subreddit."
   (mapcar (lambda (sub)
-            (redditor-mode--parse-subreddit-helper sub subreddit))
+            (redditor--parse-subreddit-helper sub subreddit))
           subreddit-vector))
 
-(defun redditor-mode--parse-comments-from-cache ()
+(defun redditor--parse-comments-from-cache ()
   "Parse comment structures from cache data."
-  (setq redditor-mode--comments-composite nil)
-  (redditor-mode--parse-comments redditor-mode--cache-comments)
-  redditor-mode--comments-composite)
+  (setq redditor--comments-composite nil)
+  (redditor--parse-comments redditor--cache-comments)
+  redditor--comments-composite)
 
-(defun redditor-mode--parse-subreddit-from-cache (subreddit)
+(defun redditor--parse-subreddit-from-cache (subreddit)
   "Parse comment structures from cache data.
 
 SUBREDDIT should be a valid subreddit."
-  (setf (gethash subreddit redditor-mode--subreddit-composite) nil)
-  (redditor-mode--parse-subreddit (list (gethash subreddit redditor-mode--cache-subreddit)) subreddit)
-  (gethash subreddit redditor-mode--subreddit-composite))
+  (setf (gethash subreddit redditor--subreddit-composite) nil)
+  (redditor--parse-subreddit (list (gethash subreddit redditor--cache-subreddit)) subreddit)
+  (gethash subreddit redditor--subreddit-composite))
 
-(defun redditor-mode--find-comment-by-name (name)
+(defun redditor--find-comment-by-name (name)
   "Given NAME, find the corresponding comment."
   (cl-find-if
    (lambda (comment)
      (equal name (alist-get 'name comment)))
-   redditor-mode--comments-composite))
+   redditor--comments-composite))
 
-(defun redditor-mode--find-subreddit-post-by-name (name)
+(defun redditor--find-subreddit-post-by-name (name)
   "Given NAME, find the corresponding subreddit-post."
   (let ((found nil))
     (maphash
@@ -180,10 +180,10 @@ SUBREDDIT should be a valid subreddit."
                  (equal name (alist-get 'name subreddit-post)))
                hash-value)))
          (when post-find (setq found post-find))))
-     redditor-mode--subreddit-composite)
+     redditor--subreddit-composite)
     found))
 
-(defvar redditor-mode--parentfn
+(defvar redditor--parentfn
   (lambda (name)
     (unless (equal 'thread name)
       (let ((parent-id
@@ -192,27 +192,27 @@ SUBREDDIT should be a valid subreddit."
               (cl-find-if
                (lambda (comment)
                  (equal name (alist-get 'name comment)))
-               redditor-mode--comments-composite))))
+               redditor--comments-composite))))
         (if parent-id parent-id 'thread)))))
 
-(defgroup redditor-mode nil
+(defgroup redditor nil
   "Redditor Mode customization group."
   :group 'applications)
 
-(defcustom redditor-mode-subreddits-active
+(defcustom redditor-subreddits-active
   '(emacs lisp+Common_Lisp prolog)
   "List of subreddits you would like to subscribe to."
-  :group 'redditor-mode
+  :group 'redditor
   :type (list 'symbol))
 
-(defvar redditor-mode--hierarchy (hierarchy-new))
+(defvar redditor--hierarchy (hierarchy-new))
 
-(defvar redditor-mode--subreddit-hierarchy (hierarchy-new))
+(defvar redditor--subreddit-hierarchy (hierarchy-new))
 
-(defun redditor-mode--comments-unique-ids (comments)
+(defun redditor--comments-unique-ids (comments)
   "Get the unique IDs from both parent and name slots.
 
-COMMENTS should be the ‘redditor-mode--comments-composite’.
+COMMENTS should be the ‘redditor--comments-composite’.
 
 If we want to date sort or something, this would probably be
 the spot to do it as well."
@@ -225,40 +225,40 @@ the spot to do it as well."
      for c in comments
      collect (alist-get 'parent_id c)))))
 
-(defun redditor-mode--hierarchy-build ()
+(defun redditor--hierarchy-build ()
   "Generate the comment structure."
-  (setq redditor-mode--hierarchy (hierarchy-new))
-  (hierarchy-add-tree redditor-mode--hierarchy 'thread redditor-mode--parentfn)
-  (let ((comments (redditor-mode--parse-comments-from-cache)))
+  (setq redditor--hierarchy (hierarchy-new))
+  (hierarchy-add-tree redditor--hierarchy 'thread redditor--parentfn)
+  (let ((comments (redditor--parse-comments-from-cache)))
     (cl-loop
-     for comment in (redditor-mode--comments-unique-ids comments)
+     for comment in (redditor--comments-unique-ids comments)
      do (progn
           (hierarchy-add-tree
-           redditor-mode--hierarchy
+           redditor--hierarchy
            comment
-           redditor-mode--parentfn)))))
+           redditor--parentfn)))))
 
-(defun redditor-mode--subreddit-hierarchy-build ()
+(defun redditor--subreddit-hierarchy-build ()
   "Generate the subreddit-post structure."
-  (setq redditor-mode--subreddit-hierarchy (hierarchy-new))
-  (hierarchy-add-tree redditor-mode--subreddit-hierarchy 'subs (lambda (_) nil))
+  (setq redditor--subreddit-hierarchy (hierarchy-new))
+  (hierarchy-add-tree redditor--subreddit-hierarchy 'subs (lambda (_) nil))
   (mapcar
    (lambda (subreddit)
-     (hierarchy-add-tree redditor-mode--subreddit-hierarchy subreddit (lambda (_) 'subs))
-     (let ((subreddit-posts (redditor-mode--parse-subreddit-from-cache subreddit)))
+     (hierarchy-add-tree redditor--subreddit-hierarchy subreddit (lambda (_) 'subs))
+     (let ((subreddit-posts (redditor--parse-subreddit-from-cache subreddit)))
        (cl-loop
         for subreddit-post in subreddit-posts
         do (progn
              (hierarchy-add-tree
-              redditor-mode--subreddit-hierarchy
+              redditor--subreddit-hierarchy
               (alist-get 'name subreddit-post)
               (lambda (_) subreddit))))))
-   redditor-mode-subreddits-active))
+   redditor-subreddits-active))
 
-(defvar redditor-mode--hierarchy-labelfn-hooks nil)
-(defvar redditor-mode--subreddit-hierarchy-labelfn-hooks nil)
+(defvar redditor--hierarchy-labelfn-hooks nil)
+(defvar redditor--subreddit-hierarchy-labelfn-hooks nil)
 
-(defun redditor-mode--hierarchy-labelfn-button (labelfn actionfn)
+(defun redditor--hierarchy-labelfn-button (labelfn actionfn)
   "Return a function rendering LABELFN in a button.
 
 Clicking the button triggers ACTIONFN.  ACTIONFN is a function
@@ -271,28 +271,28 @@ return value of ACTIONFN is ignored."
       (make-text-button start (point)
                         'action (lambda (_) (funcall actionfn item indent)))
       (cl-loop
-       for fn in redditor-mode--hierarchy-labelfn-hooks
+       for fn in redditor--hierarchy-labelfn-hooks
        do (funcall fn item indent)))))
 
-(defun redditor-mode--comments-show ()
+(defun redditor--comments-show ()
   "Show the comments that were built in the structure."
   (interactive)
-  (setq redditor-mode--hierarchy-labelfn-hooks
+  (setq redditor--hierarchy-labelfn-hooks
         '((lambda (item indent)
-            (let ((comment (redditor-mode--find-comment-by-name item)))
+            (let ((comment (redditor--find-comment-by-name item)))
               (when comment
                 (let-alist comment
                   (insert
                    (format " (%s) → %s\n"
                            .score .body))))))))
-  (redditor-mode--hierarchy-build)
+  (redditor--hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
-    redditor-mode--hierarchy
+    redditor--hierarchy
     (hierarchy-labelfn-indent
-     (redditor-mode--hierarchy-labelfn-button
+     (redditor--hierarchy-labelfn-button
       (lambda (item _)
-        (let ((comment (redditor-mode--find-comment-by-name item)))
+        (let ((comment (redditor--find-comment-by-name item)))
           (if comment
               (insert
                (format "%s"
@@ -300,43 +300,49 @@ return value of ACTIONFN is ignored."
             (insert (symbol-name item)))))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
-(defun redditor-mode--subreddit-show ()
+(defun redditor--subreddit-show ()
   "Show the subreddit-posts that were built in the structure."
   (interactive)
-  (setq redditor-mode--hierarchy-labelfn-hooks
+  (setq redditor--hierarchy-labelfn-hooks
         '((lambda (item indent)
-            (let ((subreddit-post (redditor-mode--find-subreddit-post-by-name item)))
+            (let ((subreddit-post (redditor--find-subreddit-post-by-name item)))
               (when subreddit-post
                 (let-alist subreddit-post
                   (insert
                    (format " (↑ %s / ☠ %s) by: %s"
                            .score .num_comments .author))))))))
-  (redditor-mode--subreddit-hierarchy-build)
+  (redditor--subreddit-hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
-    redditor-mode--subreddit-hierarchy
+    redditor--subreddit-hierarchy
     (hierarchy-labelfn-indent
-     (redditor-mode--hierarchy-labelfn-button
+     (redditor--hierarchy-labelfn-button
       (lambda (item _)
-        (let ((subreddit-post (redditor-mode--find-subreddit-post-by-name item)))
+        (let ((subreddit-post (redditor--find-subreddit-post-by-name item)))
           (if subreddit-post
               (insert
                (format "%s"
                        (alist-get 'title subreddit-post)))
             (insert (symbol-name item)))))
       (lambda (item _)
-        (let* ((subreddit-post (redditor-mode--find-subreddit-post-by-name item))
+        (let* ((subreddit-post (redditor--find-subreddit-post-by-name item))
                (permalink (alist-get 'permalink subreddit-post)))
-          (setq redditor-mode--comment-url (format "http://reddit.com/%s.json" permalink)))
-        (redditor-mode--fetch-comments)
-        (message "Fetching: %s" redditor-mode--comment-url)))))))
+          (setq redditor--comment-url (format "http://reddit.com/%s.json" permalink)))
+        (redditor--fetch-comments)
+        (message "Fetching: %s" redditor--comment-url)))))))
+
+;;;###autoload
+(defun redditor ()
+  "Invoke the main mode."
+  (interactive)
+  ;; (redditor--fetch-comments)
+  (mapcar #'redditor--fetch-subreddit redditor-subreddits-active))
 
 ;;;###autoload
 (defun redditor-mode ()
   "Invoke the main mode."
   (interactive)
-  ;; (redditor-mode--fetch-comments)
-  (mapcar #'redditor-mode--fetch-subreddit redditor-mode-subreddits-active))
+  (redditor))
 
-(provide 'redditor-mode)
-;;; redditor-mode.el ends here
+(provide 'redditor)
+;;; redditor.el ends here
