@@ -358,7 +358,9 @@ return value of ACTIONFN is ignored."
                        (alist-get 'title subreddit-post)))
             (insert (symbol-name item)))))
       (lambda (item _)
-        (setq rm:comment-url (format "http://reddit.com/%s.json" (symbol-name item)))
+        (let* ((subreddit-post (rm:find-subreddit-post-by-name item))
+               (permalink (alist-get 'permalink subreddit-post)))
+          (setq rm:comment-url (format "http://reddit.com/%s.json" permalink)))
         (rm:fetch-comments)
         (message "Fetching: %s" rm:comment-url)))))))
 
