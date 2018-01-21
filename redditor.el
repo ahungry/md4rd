@@ -58,7 +58,7 @@
   (cl-function
    (lambda (&rest data &allow-other-keys)
      "Callback for async, DATA is the response from request."
-     (let ((data (cl-getf data :data)))
+     (let ((data (plist-get data :data)))
        (setq redditor--cache-comments data)
        (redditor--comments-show)))))
 
@@ -66,7 +66,7 @@
   (cl-function
    (lambda (subreddit &rest data &allow-other-keys)
      "Callback for async, DATA is the response from request."
-     (let ((my-data (cl-getf data :data)))
+     (let ((my-data (plist-get data :data)))
        (setf (gethash subreddit redditor--cache-subreddit) my-data)
        (redditor--subreddit-show)))))
 
