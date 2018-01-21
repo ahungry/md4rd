@@ -54,21 +54,17 @@
 (defvar redditor--subreddit-composite
   (make-hash-table :test #'equal))
 
-(defvar redditor--fetch-comments-callback
-  (cl-function
-   (lambda (&rest data &allow-other-keys)
-     "Callback for async, DATA is the response from request."
-     (let ((data (plist-get data :data)))
-       (setq redditor--cache-comments data)
-       (redditor--comments-show)))))
+(cl-defun redditor--fetch-comments-callback (&rest data &allow-other-keys)
+  "Callback for async, DATA is the response from request."
+  (let ((data (plist-get data :data)))
+    (setq redditor--cache-comments data)
+    (redditor--comments-show)))
 
-(defvar redditor--fetch-subreddit-callback
-  (cl-function
-   (lambda (subreddit &rest data &allow-other-keys)
-     "Callback for async, DATA is the response from request."
-     (let ((my-data (plist-get data :data)))
-       (setf (gethash subreddit redditor--cache-subreddit) my-data)
-       (redditor--subreddit-show)))))
+(cl-defun redditor--fetch-subreddit-callback (subreddit &rest data &allow-other-keys)
+  "Callback for async, DATA is the response from request."
+  (let ((my-data (plist-get data :data)))
+    (setf (gethash subreddit redditor--cache-subreddit) my-data)
+    (redditor--subreddit-show)))
 
 (defvar redditor--subreddit-url
   "https://www.reddit.com/r/%s.json")
@@ -79,7 +75,7 @@
   "Get a list of the comments on a thread."
   (request-response-data
    (request redditor--comment-url
-            :complete redditor--fetch-comments-callback
+            :complete #'redditor--fetch-comments-callback
             :sync nil
             :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
@@ -91,7 +87,7 @@
             :complete
             (cl-function
              (lambda (&rest data &allow-other-keys)
-               (apply redditor--fetch-subreddit-callback subreddit data)))
+               (apply #'redditor--fetch-subreddit-callback subreddit data)))
             :sync nil
             :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
