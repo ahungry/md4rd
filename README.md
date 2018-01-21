@@ -8,7 +8,7 @@ Clone the repo, then in your Emacs init file:
 
 ```lisp
 (add-to-list 'load-path "/path/to/repo")
-(require 'redditor-mode)
+(require 'redditor)
 (redditor-mode) ;; to launch it
 ```
 
@@ -18,7 +18,7 @@ You can subscribe to different reddits by customizing your
 rm::subreddits-active variable.
 
 ```
-(setq subreddits-active '(lisp+Common_Lisp emacs prolog)
+(setq redditor-subreddits-active '(lisp+Common_Lisp emacs prolog)
 ```
 
 (A cool feature of reddit is you can view multiple reddits combined with
