@@ -60,9 +60,7 @@
      "Callback for async, DATA is the response from request."
      (let ((data (cl-getf data :data)))
        (setq rm:cache-comments data)
-       (rm:comments-show)
-       )))
-  )
+       (rm:comments-show)))))
 
 (defvar rm:fetch-subreddit-callback
   (cl-function
@@ -70,15 +68,12 @@
      "Callback for async, DATA is the response from request."
      (let ((my-data (cl-getf data :data)))
        (setf (gethash subreddit rm:cache-subreddit) my-data)
-       (rm:subreddit-show)
-       )))
-  )
+       (rm:subreddit-show)))))
 
 (defvar rm:subreddit-url
   "https://www.reddit.com/r/%s.json")
 
-(defvar rm:comment-url
-  "https://www.reddit.com/r/emacs/comments/7rbzqx/rms_please_help_proofreading_the_emacs_manual.json")
+(defvar rm:comment-url nil)
 
 (defun rm:fetch-comments ()
   "Get a list of the comments on a thread."
@@ -105,67 +100,38 @@
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
-  (let* ((data (assoc 'data comments))
-         (name (assoc 'name data))
-         (parent_id (assoc 'parent_id data))
-         (body (assoc 'body data))
-         (author (assoc 'author data))
-         (score (assoc 'score data))
-         (replies (assoc 'replies data))
-         (children (assoc 'children data)))
-    (when (and name body parent_id)
-      (let ((composite
-             `(
-               (name . ,(intern (cdr name)))
-               ,body
-               ,author
-               ,score
-               (parent_id . ,(intern (cdr parent_id))))))
+  (let-alist (alist-get 'data comments)
+    (when (and .name .body .parent_id)
+      (let ((composite (list (cons 'name (intern .name))
+                             (cons 'body   .body)
+                             (cons 'author .author)
+                             (cons 'score  .score)
+                             (cons 'parent_id (intern .parent_id)))))
         (push composite rm:comments-composite)))
-    (when children (rm:parse-comments (cdr children)))
-    (when (and replies
-               (cdr replies)
-               (listp (cdr replies)))
-      (rm:parse-comments-helper (cdr replies))
-      )
-    )
-  )
+    (when .children (rm:parse-comments .children))
+    (when (and .replies
+               (listp .replies))
+      (rm:parse-comments-helper .replies))))
 
 (defun rm:parse-subreddit-helper (subreddit-post subreddit)
   "Parse the subreddit that were fetched.
 
 SUBREDDIT-POST is the actual post data submitted.
 SUBREDDIT block is the nested list structure with them."
-  (let* ((data (assoc 'data subreddit-post))
-         (name (assoc 'permalink data))
-         (permalink (assoc 'permalink data))
-         (num_comments (assoc 'num_comments data))
-         (author (assoc 'author data))
-         (title (assoc 'title data))
-         (selftext (assoc 'selftext data))
-         (score (assoc 'score data))
-         (replies (assoc 'replies data))
-         (children (assoc 'children data)))
-    (when (and name permalink)
-      (let ((composite
-             `(
-               (name . ,(intern (cdr name)))
-               ,permalink
-               ,num_comments
-               ,author
-               ,title
-               ,selftext
-               ,score)))
-        (push composite (gethash subreddit rm:subreddit-composite))
-        ))
-    (when children (rm:parse-subreddit (cdr children) subreddit))
-    (when (and replies
-               (cdr replies)
-               (listp (cdr replies)))
-      (rm:parse-subreddit-helper (cdr replies) subreddit)
-      )
-    )
-  )
+  (let-alist (alist-get 'data subreddit-post)
+    (when (and .name .permalink)
+      (let ((composite (list (cons 'name (intern .name))
+                             (cons 'permalink    .permalink)
+                             (cons 'num_comments .num_comments)
+                             (cons 'author       .author)
+                             (cons 'title        .title)
+                             (cons 'selftext     .selftext)
+                             (cons 'score        .score))))
+        (push composite (gethash subreddit rm:subreddit-composite))))
+    (when .children (rm:parse-subreddit .children subreddit))
+    (when (and .replies
+               (listp .replies))
+      (rm:parse-subreddit-helper .replies subreddit))))
 
 (defun rm:parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
@@ -186,8 +152,7 @@ SUBREDDIT is the name of the subreddit."
   "Parse comment structures from cache data."
   (setq rm:comments-composite nil)
   (rm:parse-comments rm:cache-comments)
-  rm:comments-composite
-  )
+  rm:comments-composite)
 
 (defun rm:parse-subreddit-from-cache (subreddit)
   "Parse comment structures from cache data.
@@ -195,14 +160,13 @@ SUBREDDIT is the name of the subreddit."
 SUBREDDIT should be a valid subreddit."
   (setf (gethash subreddit rm:subreddit-composite) nil)
   (rm:parse-subreddit (list (gethash subreddit rm:cache-subreddit)) subreddit)
-  (gethash subreddit rm:subreddit-composite)
-  )
+  (gethash subreddit rm:subreddit-composite))
 
 (defun rm:find-comment-by-name (name)
   "Given NAME, find the corresponding comment."
   (cl-find-if
    (lambda (comment)
-     (equal name (cdr (assoc 'name comment))))
+     (equal name (alist-get 'name comment)))
    rm:comments-composite))
 
 (defun rm:find-subreddit-post-by-name (name)
@@ -213,7 +177,7 @@ SUBREDDIT should be a valid subreddit."
        (let ((post-find
               (cl-find-if
                (lambda (subreddit-post)
-                 (equal name (cdr (assoc 'name subreddit-post))))
+                 (equal name (alist-get 'name subreddit-post)))
                hash-value)))
          (when post-find (setq found post-find))))
      rm:subreddit-composite)
@@ -223,14 +187,13 @@ SUBREDDIT should be a valid subreddit."
   (lambda (name)
     (unless (equal 'thread name)
       (let ((parent-id
-             (cdr (assoc
-                   'parent_id
-                   (cl-find-if
-                    (lambda (comment)
-                      (equal name (cdr (assoc 'name comment))))
-                    rm:comments-composite)))))
-        (if parent-id parent-id 'thread)))
-    ))
+             (alist-get
+              'parent_id
+              (cl-find-if
+               (lambda (comment)
+                 (equal name (alist-get 'name comment)))
+               rm:comments-composite))))
+        (if parent-id parent-id 'thread)))))
 
 (defgroup redditor-mode nil
   "Redditor Mode customization group."
@@ -257,11 +220,10 @@ the spot to do it as well."
    (append
     (cl-loop
      for c in comments
-     collect (cdr (assoc 'name c)))
+     collect (alist-get 'name c))
     (cl-loop
      for c in comments
-     collect (cdr (assoc 'parent_id c)))))
-  )
+     collect (alist-get 'parent_id c)))))
 
 (defun rm:hierarchy-build ()
   "Generate the comment structure."
@@ -274,8 +236,7 @@ the spot to do it as well."
           (hierarchy-add-tree
            rm:hierarchy
            comment
-           rm:parentfn))))
-  )
+           rm:parentfn)))))
 
 (defun rm:subreddit-hierarchy-build ()
   "Generate the subreddit-post structure."
@@ -290,11 +251,9 @@ the spot to do it as well."
         do (progn
              (hierarchy-add-tree
               rm:subreddit-hierarchy
-              (cdr (assoc 'name subreddit-post))
-              (lambda (_) subreddit))
-             ))))
-   rm::subreddits-active)
-  )
+              (alist-get 'name subreddit-post)
+              (lambda (_) subreddit))))))
+   rm::subreddits-active))
 
 ;; (defun rm:hierarchy-build ()
 ;;   "Generate the comment structure."
@@ -352,15 +311,13 @@ return value of ACTIONFN is ignored."
   "Show the comments that were built in the structure."
   (interactive)
   (setq rm:hierarchy-labelfn-hooks
-        '(
-          (lambda (item indent)
+        '((lambda (item indent)
             (let ((comment (rm:find-comment-by-name item)))
               (when comment
-                (insert
-                 (format
-                  " (%s) → %s\n"
-                  (cdr (assoc 'score comment))
-                  (cdr (assoc 'body comment)))))))))
+                (let-alist comment
+                  (insert
+                   (format " (%s) → %s\n"
+                           .score .body))))))))
   (rm:hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
@@ -372,25 +329,21 @@ return value of ACTIONFN is ignored."
           (if comment
               (insert
                (format "%s"
-                       (cdr (assoc 'author comment))))
-            (insert (symbol-name item))
-            )))
+                       (alist-get 'author comment)))
+            (insert (symbol-name item)))))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
 (defun rm:subreddit-show ()
   "Show the subreddit-posts that were built in the structure."
   (interactive)
   (setq rm:hierarchy-labelfn-hooks
-        '(
-          (lambda (item indent)
+        '((lambda (item indent)
             (let ((subreddit-post (rm:find-subreddit-post-by-name item)))
               (when subreddit-post
-                (insert
-                 (format
-                  " (↑ %s / ☠ %s) by: %s"
-                  (cdr (assoc 'score subreddit-post))
-                  (cdr (assoc 'num_comments subreddit-post))
-                  (cdr (assoc 'author subreddit-post)))))))))
+                (let-alist subreddit-post
+                  (insert
+                   (format " (↑ %s / ☠ %s) by: %s"
+                           .score .num_comments .author))))))))
   (rm:subreddit-hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
@@ -402,9 +355,8 @@ return value of ACTIONFN is ignored."
           (if subreddit-post
               (insert
                (format "%s"
-                       (cdr (assoc 'title subreddit-post))))
-            (insert (symbol-name item))
-            )))
+                       (alist-get 'title subreddit-post)))
+            (insert (symbol-name item)))))
       (lambda (item _)
         (setq rm:comment-url (format "http://reddit.com/%s.json" (symbol-name item)))
         (rm:fetch-comments)
