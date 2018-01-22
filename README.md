@@ -13,7 +13,7 @@ need's dictate :)
 
 https://www.reddit.com/wiki/api
 
-# Usage
+# Installation
 
 Clone the repo, then in your Emacs init file:
 
@@ -46,6 +46,20 @@ prompt, which will have been waiting for you to finish the process.
 It will then fetch your oauth access token and refresh tokens.
 
 Bring on the upvotes!
+
+# Usage
+
+If you're signed in, you can highlight a post in the \*subreddit\*
+buffer and upvote or downvote as you like.
+
+# Keys
+
+```
+u	: md4rd-upvote
+d	: md4rd-upvote
+o	: md4rd-open-link-in-browser
+RET	: md4rd--fetch-comments
+```
 
 # Customization
 

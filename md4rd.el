@@ -78,7 +78,7 @@
 (defvar md4rd--action-button-ctx 'visit
   "The next action to attempt on a button press.
 
-Should be one of visit, upvote, downvote.")
+Should be one of visit, upvote, downvote, open.")
 
 (defun md4rd--oauth-build-url ()
   "Generate the URL based on our parameters."
@@ -157,6 +157,20 @@ Should be one of visit, upvote, downvote.")
   (call-interactively #'md4rd-oauth-set-code)
   (md4rd--oauth-fetch-authorization-token))
 
+;; For comment votes, the usable id is just the 'name' property.
+(defun md4rd--post-vote (id dir)
+  "Cast a vote on a thing.  ID is the t3_xxx type id, DIR is up or down."
+  (message (format  "Voting on %s with a value of: %s" id dir))
+  (request-response-data
+   (request "https://oauth.reddit.com/api/vote"
+            :complete nil
+            :data (format "id=%s&dir=%s" id dir)
+            :sync nil
+            :type "POST"
+            :parser #'json-read
+            :headers `(("User-Agent" . "md4rd")
+                       ("Authorization" . ,(format  "bearer %s" md4rd--oauth-access-token))))))
+
 (defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
 
@@ -231,6 +245,7 @@ SUB block is the nested list structure with them."
     (when (and .name .permalink)
       (let ((composite (list (cons 'name (intern .name))
                              (cons 'permalink    .permalink)
+                             (cons 'url          .url)
                              (cons 'num_comments .num_comments)
                              (cons 'author       .author)
                              (cons 'title        .title)
@@ -439,21 +454,24 @@ return value of ACTIONFN is ignored."
               (insert (symbol-name item)))))
         ;; Controls the button events we dispatch.
         (lambda (item _)
-          (let* ((sub-post (md4rd--find-sub-post-by-name item))
-                 (permalink (alist-get 'permalink sub-post))
-                 (comment-url (format "http://reddit.com/%s.json" permalink)))
-            (cond
-             ((equal 'upvote md4rd--action-button-ctx)
-              (message "UP"))
+          (let ((sub-post (md4rd--find-sub-post-by-name item)))
+            (let-alist sub-post
+              (cond
+               ((equal 'upvote md4rd--action-button-ctx)
+                (md4rd--post-vote .name +1))
 
-             ((equal 'downvote md4rd--action-button-ctx)
-              (message "down"))
+               ((equal 'downvote md4rd--action-button-ctx)
+                (md4rd--post-vote .name -1))
 
-             ((equal 'visit md4rd--action-button-ctx)
-              (message "Fetching: %s" md4rd--comment-url)
-              (md4rd--fetch-comments comment-url))
+               ((equal 'open md4rd--action-button-ctx)
+                (browse-url .url))
 
-             t (error "Unknown link action!"))))))
+               ((equal 'visit md4rd--action-button-ctx)
+                (message "Fetching: %s" md4rd--comment-url)
+                (md4rd--fetch-comments
+                 (format "http://reddit.com/%s.json" .permalink)))
+
+               t (error "Unknown link action!")))))))
       buffer))
     (md4rd-mode)))
 
@@ -495,6 +513,15 @@ return value of ACTIONFN is ignored."
     (push-button)
     (setq md4rd--action-button-ctx 'visit)))
 
+(defun md4rd-open ()
+  "Upvote something the user is on."
+  (interactive)
+  (when (equal 'button (button-type (button-at (point))))
+    (setq md4rd--action-button-ctx 'open)
+    (message "Opening!")
+    (push-button)
+    (setq md4rd--action-button-ctx 'visit)))
+
 ;;  __  __         _
 ;; |  \/  |___  __| |___
 ;; | |\/| / _ \/ _` / -_)
@@ -506,6 +533,7 @@ return value of ACTIONFN is ignored."
   (let ((map (make-keymap)))
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
+    (define-key map (kbd "o") 'md4rd-open)
     map)
   "Keymap for md4rd major mode.")
 
@@ -514,7 +542,8 @@ return value of ACTIONFN is ignored."
   (interactive)
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "u") 'md4rd-upvote)
-    (evil-define-key '(normal motion) md4rd-mode-map (kbd "d") 'md4rd-downvote)))
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "d") 'md4rd-downvote)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "o") 'md4rd-open)))
 
 ;;;###autoload
 (defun md4rd-mode ()
