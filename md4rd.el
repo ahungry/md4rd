@@ -96,7 +96,7 @@
 
 (cl-defun md4rd--oauth-fetch-callback (&rest data &allow-other-keys)
   "Callback to run when the oauth code fetch is complete."
-  (let-alist data
+  (let-alist (plist-get data :data)
     (unless (and .access_token .refresh_token)
       (error "Failed to fetch OAuth access_token and refresh_token values!"))
     (setq md4rd--oauth-access-token .access_token)
@@ -117,6 +117,13 @@
             :headers `(("User-Agent" . "md4rd")
                        ;; This is just the 'client_id:' base64'ed
                        ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6'")))))
+
+(defun md4rd-login ()
+  "Sign into the reddit system via OAuth, to allow use of authenticated endpoints."
+  (interactive)
+  (md4rd--oauth-browser-fetch)
+  (call-interactively #'md4rd-oauth-set-code)
+  (md4rd--oauth-fetch))
 
 (defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
