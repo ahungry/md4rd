@@ -57,7 +57,7 @@ buffer and upvote or downvote as you like.
 ```
 u	: md4rd-upvote
 d	: md4rd-upvote
-o	: md4rd-open-link-in-browser
+o	: md4rd-open (link-in-browser)
 RET	: md4rd--fetch-comments
 ```
 

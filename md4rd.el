@@ -48,7 +48,7 @@
 ;; | (_) / _ \ || |  _| ' \
 ;;  \___/_/ \_\_,_|\__|_||_|
 
-;; OAuth related code:
+;; OAuth related code (figlets rock!):
 
 ;; https://github.com/reddit/reddit/wiki/OAuth2
 (defvar md4rd--oauth-client-id "FaEUihB391qTwA"
@@ -329,6 +329,15 @@ SUB should be a valid sub."
   :group 'md4rd
   :type (list 'symbol))
 
+
+;;  ___  _         _
+;; |   \(_)____ __| |__ _ _  _
+;; | |) | (_-< '_ \ / _` | || |
+;; |___/|_/__/ .__/_\__,_|\_, |
+;;           |_|          |__/
+
+;; Display related code (thanks hierarchy):
+
 (defvar md4rd--hierarchy (hierarchy-new))
 
 (defvar md4rd--sub-hierarchy (hierarchy-new))
@@ -467,11 +476,11 @@ return value of ACTIONFN is ignored."
                 (browse-url .url))
 
                ((equal 'visit md4rd--action-button-ctx)
-                (message "Fetching: %s" md4rd--comment-url)
+                (message "Fetching: %s" .permalink)
                 (md4rd--fetch-comments
                  (format "http://reddit.com/%s.json" .permalink)))
 
-               t (error "Unknown link action!")))))))
+               (t (error "Unknown link action!"))))))))
       buffer))
     (md4rd-mode)))
 
