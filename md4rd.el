@@ -42,6 +42,56 @@
 (defvar md4rd--version "0.0.1"
   "The current version of the mode.")
 
+;;   ___   _       _   _
+;;  / _ \ /_\ _  _| |_| |_
+;; | (_) / _ \ || |  _| ' \
+;;  \___/_/ \_\_,_|\__|_||_|
+
+;; OAuth related code:
+
+;; https://github.com/reddit/reddit/wiki/OAuth2
+(defvar md4rd--oauth-client-id "FaEUihB391qTwA"
+  "The client ID that links this up to the reddit.com OAuth endpoint.")
+
+(defvar md4rd--oauth-redirect-uri
+  "http://ahungry.com/md4rd"
+  "The client ID that links this up to the reddit.com OAuth endpoint.")
+
+(defvar md4rd--oauth-url
+  "https://www.reddit.com/api/v1/authorize?client_id=%s&response_type=code&state=nil&redirect_uri=%s&duration=permanent&scope=vote"
+  "The OAuth URL/endpoint.")
+
+(defun md4rd--oauth-build-url ()
+  "Generate the URL based on our parameters."
+   (format md4rd--oauth-url
+           md4rd--oauth-client-id
+           md4rd--oauth-redirect-uri))
+
+;; User should end up here:
+;; http://ahungry.com/md4rd?state=nil&code=secret_code_shown
+(defun md4rd--oauth-browser-fetch ()
+  "Open the user's browser to the endpoint to get the OAuth token."
+  (message (format "Open browser to: %s" (md4rd--oauth-build-url)))
+  (browse-url
+   (md4rd--oauth-build-url)))
+
+(cl-defun md4rd--oauth-fetch-callback (&rest data &allow-other-keys)
+  "Callback to run when the oauth code fetch is complete."
+  (let-alist (alist-get 'data data)
+    (print )
+    (message "Fetched!")))
+
+(defun md4rd--oauth-fetch ()
+  "Make the initial code request for OAuth."
+  (request-response-data
+   (request (format md4rd--oauth-url
+                    md4rd--oauth-client-id
+                    md4rd--oauth-redirect-uri)
+            :complete #'md4rd--oauth-fetch-callback
+            :sync nil
+            :parser #'json-read
+            :headers `(("User-Agent" . "md4rd")))))
+
 (defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
 
