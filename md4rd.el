@@ -435,7 +435,27 @@ return value of ACTIONFN is ignored."
                (format "%s"
                        (alist-get 'author comment)))
             (insert (symbol-name item)))))
-      (lambda (item _) (message "You clicked on: %s" item)))))))
+      ;; Controls the button events we dispatch.
+      (lambda (item _)
+          (let ((comment (md4rd--find-comment-by-name item)))
+            (let-alist comment
+              (cond
+               ((equal 'upvote md4rd--action-button-ctx)
+                (md4rd--post-vote .name +1))
+
+               ((equal 'downvote md4rd--action-button-ctx)
+                (md4rd--post-vote .name -1))
+
+               ((equal 'open md4rd--action-button-ctx)
+                (browse-url .url))
+
+               ((equal 'visit md4rd--action-button-ctx)
+                (message "Fetching: %s" .permalink)
+                (md4rd--fetch-comments
+                 (format "http://reddit.com/%s.json" .permalink)))
+
+               (t (error "Unknown link action!"))))))))))
+  (md4rd-mode))
 
 (defun md4rd--sub-show ()
   "Show the sub-posts that were built in the structure."

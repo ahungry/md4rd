@@ -80,11 +80,6 @@ See the following (shown in `emacs -nw` mode):
 ![subreddit](https://raw.githubusercontent.com/ahungry/redditor-mode/master/img/redditor-mode-3.png)
 ![comments](https://raw.githubusercontent.com/ahungry/redditor-mode/master/img/redditor-mode-2.png)
 
-# todo
-
-- comment / post upvotes/downvotes
-- customize to view other reddits + various other UI customizations
-
 # License
 
 GPLv3
