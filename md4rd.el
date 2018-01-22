@@ -5,7 +5,7 @@
 ;; Author: Matthew Carter <m@ahungry.com>
 ;; Maintainer: Matthew Carter <m@ahungry.com>
 ;; URL: https://github.com/ahungry/color-theme-ahungry
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; Keywords: ahungry reddit browse news
 ;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0"))
 
@@ -28,8 +28,8 @@
 
 ;;; Commentary:
 
-;; See a ref for hierarchy-mode here:
-;; https://github.com/DamienCassou/hierarchy
+;; A major mode / command set for browsing Reddit.
+;; After installation, just run: M-x md4rd to get started!
 
 ;;; Code:
 
@@ -40,7 +40,7 @@
 (require 'json)
 (require 's)
 
-(defvar md4rd--version "0.0.1"
+(defvar md4rd--version "0.0.2"
   "The current version of the mode.")
 
 ;;   ___   _       _   _

@@ -1,5 +1,7 @@
 # md4rd - Mode for Reddit
 
+[![MELPA](http://melpa.org/packages/md4rd-badge.svg)](http://melpa.org/#/md4rd)
+
 Read Reddit interactively from within Emacs.
 
 # Why the odd name?
