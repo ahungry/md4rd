@@ -97,14 +97,15 @@
 (cl-defun md4rd--oauth-fetch-callback (&rest data &allow-other-keys)
   "Callback to run when the oauth code fetch is complete."
   (let-alist (plist-get data :data)
-    (unless (and .access_token .refresh_token)
+    (unless (and .access_token .refresh_token .expires_in)
       (message "Failed to fetch OAuth access_token and refresh_token values!")
       (error "Failed to fetch OAuth access_token and refresh_token values!"))
     (setq md4rd--oauth-access-token .access_token)
     (setq md4rd--oauth-refresh-token .refresh_token)
+    ;; @todo Handle expires_in value (should be ~1 hour, so refresh before then)
     (message "Tokens set - consider adding md4rd--oauth-access-token and md4rd--oauth-refresh-token values to your init file to avoid signing in again in the future sessions.")))
 
-(defun md4rd--oauth-fetch ()
+(defun md4rd--oauth-fetch-authorization-token ()
   "Make the initial code request for OAuth."
   (request-response-data
    (request md4rd--oauth-access-token-uri
@@ -117,14 +118,39 @@
             :parser #'json-read
             :headers `(("User-Agent" . "md4rd")
                        ;; This is just the 'client_id:' base64'ed
-                       ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6'")))))
+                       ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6")))))
+
+(cl-defun md4rd--oauth-fetch-callback-refresh-token (&rest data &allow-other-keys)
+  "Callback to run when the oauth code fetch is complete."
+  (let-alist (plist-get data :data)
+    (unless (and .access_token .expires_in)
+      (message "Failed to fetch OAuth access_token and refresh_token values!")
+      (error "Failed to fetch OAuth access_token and refresh_token values!"))
+    (setq md4rd--oauth-access-token .access_token)
+    (setq md4rd--oauth-refresh-token .refresh_token)
+    ;; @todo Handle expires_in value (should be ~1 hour, so refresh before then)
+    (message "Tokens set - consider adding md4rd--oauth-access-token and md4rd--oauth-refresh-token values to your init file to avoid signing in again in the future sessions.")))
+
+(defun md4rd--oauth-fetch-refresh-token ()
+  "Make the initial code request for OAuth."
+  (request-response-data
+   (request md4rd--oauth-access-token-uri
+            :complete #'md4rd--oauth-fetch-callback-refresh-token
+            :data (format "grant_type=refresh_token&refresh_token=%s"
+                          md4rd--oauth-refresh-token)
+            :sync nil
+            :type "POST"
+            :parser #'json-read
+            :headers `(("User-Agent" . "md4rd")
+                       ;; This is just the 'client_id:' base64'ed
+                       ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6")))))
 
 (defun md4rd-login ()
   "Sign into the reddit system via OAuth, to allow use of authenticated endpoints."
   (interactive)
   (md4rd--oauth-browser-fetch)
   (call-interactively #'md4rd-oauth-set-code)
-  (md4rd--oauth-fetch))
+  (md4rd--oauth-fetch-authorization-token))
 
 (defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
