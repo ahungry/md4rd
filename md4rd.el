@@ -7,7 +7,7 @@
 ;; URL: https://github.com/ahungry/color-theme-ahungry
 ;; Version: 0.0.1
 ;; Keywords: ahungry reddit browse news
-;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0"))
+;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -38,6 +38,7 @@
 (require 'dash)
 (require 'request)
 (require 'json)
+(require 's)
 
 (defvar md4rd--version "0.0.1"
   "The current version of the mode.")
@@ -61,36 +62,61 @@
   "https://www.reddit.com/api/v1/authorize?client_id=%s&response_type=code&state=nil&redirect_uri=%s&duration=permanent&scope=vote"
   "The OAuth URL/endpoint.")
 
+(defvar md4rd--oauth-access-token-uri
+  "https://www.reddit.com/api/v1/access_token"
+  "The OAuth access token URI (step 2, after user fills out code).")
+
+(defvar md4rd--oauth-code ""
+  "The code, as given from the reddit redirect URI after user accepts permissions.")
+
+(defvar md4rd--oauth-access-token ""
+  "The access token, as given from the reddit OAuth endpoint after user inputs code.")
+
+(defvar md4rd--oauth-refresh-token ""
+  "The refresh token, as given from the reddit OAuth endpoint after user inputs code.")
+
 (defun md4rd--oauth-build-url ()
   "Generate the URL based on our parameters."
-   (format md4rd--oauth-url
-           md4rd--oauth-client-id
-           md4rd--oauth-redirect-uri))
+  (format md4rd--oauth-url
+          md4rd--oauth-client-id
+          md4rd--oauth-redirect-uri))
 
 ;; User should end up here:
 ;; http://ahungry.com/md4rd?state=nil&code=secret_code_shown
 (defun md4rd--oauth-browser-fetch ()
   "Open the user's browser to the endpoint to get the OAuth token."
-  (message (format "Open browser to: %s" (md4rd--oauth-build-url)))
+  (message (format "For OAuth (md4rd) opening browser to: %s" (md4rd--oauth-build-url)))
   (browse-url
    (md4rd--oauth-build-url)))
 
+(defun md4rd-oauth-set-code (code)
+  "Set the authorization CODE for OAuth (necessary to request the bearer token)."
+  (interactive "sPlease enter the code you received from the browser: ")
+  (setq md4rd--oauth-code (s-trim code)))
+
 (cl-defun md4rd--oauth-fetch-callback (&rest data &allow-other-keys)
   "Callback to run when the oauth code fetch is complete."
-  (let-alist (alist-get 'data data)
-    (print )
-    (message "Fetched!")))
+  (let-alist data
+    (unless (and .access_token .refresh_token)
+      (error "Failed to fetch OAuth access_token and refresh_token values!"))
+    (setq md4rd--oauth-access-token .access_token)
+    (setq md4rd--oauth-refresh-token .refresh_token)
+    (message "Tokens set - consider adding md4rd--oauth-access-token and md4rd--oauth-refresh-token values to your init file to avoid signing in again in the future sessions.")))
 
 (defun md4rd--oauth-fetch ()
   "Make the initial code request for OAuth."
   (request-response-data
-   (request (format md4rd--oauth-url
-                    md4rd--oauth-client-id
-                    md4rd--oauth-redirect-uri)
+   (request md4rd--oauth-access-token-uri
             :complete #'md4rd--oauth-fetch-callback
+            :data (format "grant_type=authorization_code&code=%s&redirect_uri=%s"
+                          md4rd--oauth-code
+                          md4rd--oauth-redirect-uri)
             :sync nil
+            :type "POST"
             :parser #'json-read
-            :headers `(("User-Agent" . "md4rd")))))
+            :headers `(("User-Agent" . "md4rd")
+                       ;; This is just the 'client_id:' base64'ed
+                       ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6'")))))
 
 (defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
