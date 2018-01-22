@@ -75,6 +75,11 @@
 (defvar md4rd--oauth-refresh-token ""
   "The refresh token, as given from the reddit OAuth endpoint after user inputs code.")
 
+(defvar md4rd--action-button-ctx 'visit
+  "The next action to attempt on a button press.
+
+Should be one of visit, upvote, downvote.")
+
 (defun md4rd--oauth-build-url ()
   "Generate the URL based on our parameters."
   (format md4rd--oauth-url
@@ -179,12 +184,10 @@
 (defvar md4rd--sub-url
   "https://www.reddit.com/r/%s.json")
 
-(defvar md4rd--comment-url nil)
-
-(defun md4rd--fetch-comments ()
-  "Get a list of the comments on a thread."
+(defun md4rd--fetch-comments (comment-url)
+  "Get a list of the comments on a thread that belong to COMMENT-URL."
   (request-response-data
-   (request md4rd--comment-url
+   (request comment-url
             :complete #'md4rd--fetch-comments-callback
             :sync nil
             :parser #'json-read
@@ -409,46 +412,120 @@ return value of ACTIONFN is ignored."
 (defun md4rd--sub-show ()
   "Show the sub-posts that were built in the structure."
   (interactive)
-  (setq md4rd--hierarchy-labelfn-hooks
-        '((lambda (item indent)
-            (let ((sub-post (md4rd--find-sub-post-by-name item)))
-              (when sub-post
-                (let-alist sub-post
-                  (insert
-                   (format " (↑ %s / ☠ %s) by: %s"
-                           .score .num_comments .author))))))))
-  (md4rd--sub-hierarchy-build)
-  (switch-to-buffer
-   (hierarchy-tree-display
-    md4rd--sub-hierarchy
-    (hierarchy-labelfn-indent
-     (md4rd--hierarchy-labelfn-button
-      (lambda (item _)
-        (let ((sub-post (md4rd--find-sub-post-by-name item)))
-          (if sub-post
-              (insert
-               (format "%s"
-                       (alist-get 'title sub-post)))
-            (insert (symbol-name item)))))
-      (lambda (item _)
-        (let* ((sub-post (md4rd--find-sub-post-by-name item))
-               (permalink (alist-get 'permalink sub-post)))
-          (setq md4rd--comment-url (format "http://reddit.com/%s.json" permalink)))
-        (md4rd--fetch-comments)
-        (message "Fetching: %s" md4rd--comment-url)))))))
+  ;; Unique buffer for subreddit displays.
+  (let ((buffer (or (get-buffer "*subreddits*")
+                    (get-buffer-create "*subreddits*"))))
+    (setq md4rd--hierarchy-labelfn-hooks
+          '((lambda (item indent)
+              (let ((sub-post (md4rd--find-sub-post-by-name item)))
+                (when sub-post
+                  (let-alist sub-post
+                    (insert
+                     (format " (↑ %s / ☠ %s) by: %s"
+                             .score .num_comments .author))))))))
+    (md4rd--sub-hierarchy-build)
+    (switch-to-buffer
+     (hierarchy-tree-display
+      md4rd--sub-hierarchy
+      (hierarchy-labelfn-indent
+       (md4rd--hierarchy-labelfn-button
+        ;; Controls the label we show for the raticle post.
+        (lambda (item _)
+          (let ((sub-post (md4rd--find-sub-post-by-name item)))
+            (if sub-post
+                (insert
+                 (format "%s"
+                         (alist-get 'title sub-post)))
+              (insert (symbol-name item)))))
+        ;; Controls the button events we dispatch.
+        (lambda (item _)
+          (let* ((sub-post (md4rd--find-sub-post-by-name item))
+                 (permalink (alist-get 'permalink sub-post))
+                 (comment-url (format "http://reddit.com/%s.json" permalink)))
+            (cond
+             ((equal 'upvote md4rd--action-button-ctx)
+              (message "UP"))
+
+             ((equal 'downvote md4rd--action-button-ctx)
+              (message "down"))
+
+             ((equal 'visit md4rd--action-button-ctx)
+              (message "Fetching: %s" md4rd--comment-url)
+              (md4rd--fetch-comments comment-url))
+
+             t (error "Unknown link action!"))))))
+      buffer))
+    (md4rd-mode)))
 
 ;;;###autoload
 (defun md4rd ()
   "Invoke the main mode."
   (interactive)
-  ;; (md4rd--fetch-comments)
   (mapcar #'md4rd--fetch-sub md4rd-subs-active))
+
+;;;###autoload
+(defun mode-for-reddit ()
+  "Invoke the main mode."
+  (interactive)
+  (md4rd))
+
+;;    _      _   _
+;;   /_\  __| |_(_)___ _ _  ___
+;;  / _ \/ _|  _| / _ \ ' \(_-<
+;; /_/ \_\__|\__|_\___/_||_/__/
+
+;;  Actions related code:
+
+(defun md4rd-upvote ()
+  "Upvote something the user is on."
+  (interactive)
+  ;; Ensure we're actually on a plain button, not a tree widget.
+  (when (equal 'button (button-type (button-at (point))))
+    (setq md4rd--action-button-ctx 'upvote)
+    (message "Upvoted!")
+    (push-button)
+    (setq md4rd--action-button-ctx 'visit)))
+
+(defun md4rd-downvote ()
+  "Upvote something the user is on."
+  (interactive)
+  (when (equal 'button (button-type (button-at (point))))
+    (setq md4rd--action-button-ctx 'downvote)
+    (message "Downvoting!")
+    (push-button)
+    (setq md4rd--action-button-ctx 'visit)))
+
+;;  __  __         _
+;; |  \/  |___  __| |___
+;; | |\/| / _ \/ _` / -_)
+;; |_|  |_\___/\__,_\___|
+
+;; Mode related code:
+
+(defvar md4rd-mode-map
+  (let ((map (make-keymap)))
+    (define-key map (kbd "u") 'md4rd-upvote)
+    (define-key map (kbd "d") 'md4rd-downvote)
+    map)
+  "Keymap for md4rd major mode.")
+
+(defun md4rd-evil-binds ()
+  "Bind commands for evil users as well (when its on)."
+  (interactive)
+  (when (fboundp 'evil-define-key)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "u") 'md4rd-upvote)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "d") 'md4rd-downvote)))
 
 ;;;###autoload
 (defun md4rd-mode ()
   "Invoke the main mode."
   (interactive)
-  (md4rd))
+  (kill-all-local-variables)
+  (use-local-map md4rd-mode-map)
+  (md4rd-evil-binds)
+  (setq major-mode 'md4rd-mode)
+  (setq mode-name "md4rd")
+  (run-hooks 'md4rd-mode-hook))
 
 (provide 'md4rd)
 ;;; md4rd.el ends here
