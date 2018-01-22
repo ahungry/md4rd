@@ -80,6 +80,10 @@
 
 Should be one of visit, upvote, downvote, open.")
 
+(defun md4rd-logged-in-p ()
+  "See if the user is signed in or not."
+  (> (length md4rd--oauth-access-token) 0))
+
 (defun md4rd--oauth-build-url ()
   "Generate the URL based on our parameters."
   (format md4rd--oauth-url
@@ -506,6 +510,8 @@ return value of ACTIONFN is ignored."
 (defun md4rd-upvote ()
   "Upvote something the user is on."
   (interactive)
+  (unless (md4rd-logged-in-p)
+    (md4rd-login))
   ;; Ensure we're actually on a plain button, not a tree widget.
   (when (equal 'button (button-type (button-at (point))))
     (setq md4rd--action-button-ctx 'upvote)
@@ -516,6 +522,8 @@ return value of ACTIONFN is ignored."
 (defun md4rd-downvote ()
   "Upvote something the user is on."
   (interactive)
+  (unless (md4rd-logged-in-p)
+    (md4rd-login))
   (when (equal 'button (button-type (button-at (point))))
     (setq md4rd--action-button-ctx 'downvote)
     (message "Downvoting!")
