@@ -98,6 +98,7 @@
   "Callback to run when the oauth code fetch is complete."
   (let-alist (plist-get data :data)
     (unless (and .access_token .refresh_token)
+      (message "Failed to fetch OAuth access_token and refresh_token values!")
       (error "Failed to fetch OAuth access_token and refresh_token values!"))
     (setq md4rd--oauth-access-token .access_token)
     (setq md4rd--oauth-refresh-token .refresh_token)
