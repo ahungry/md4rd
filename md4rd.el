@@ -1,4 +1,4 @@
-;;; redditor.el --- Browse reddit. -*- lexical-binding: t; -*-
+;;; md4rd.el --- Mode for reddit (browse it). -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2018 Matthew Carter <m@ahungry.com>
 
@@ -39,60 +39,60 @@
 (require 'request)
 (require 'json)
 
-(defvar redditor--version "0.0.1"
+(defvar md4rd--version "0.0.1"
   "The current version of the mode.")
 
-(defvar redditor--cache-comments nil
+(defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
 
-(defvar redditor--cache-subreddit
+(defvar md4rd--cache-sub
   (make-hash-table :test #'equal)
   "Store the most recent comment cache/fetch.")
 
-(defvar redditor--comments-composite nil)
+(defvar md4rd--comments-composite nil)
 
-(defvar redditor--subreddit-composite
+(defvar md4rd--sub-composite
   (make-hash-table :test #'equal))
 
-(cl-defun redditor--fetch-comments-callback (&rest data &allow-other-keys)
+(cl-defun md4rd--fetch-comments-callback (&rest data &allow-other-keys)
   "Callback for async, DATA is the response from request."
   (let ((data (plist-get data :data)))
-    (setq redditor--cache-comments data)
-    (redditor--comments-show)))
+    (setq md4rd--cache-comments data)
+    (md4rd--comments-show)))
 
-(cl-defun redditor--fetch-subreddit-callback (subreddit &rest data &allow-other-keys)
+(cl-defun md4rd--fetch-sub-callback (sub &rest data &allow-other-keys)
   "Callback for async, DATA is the response from request."
   (let ((my-data (plist-get data :data)))
-    (setf (gethash subreddit redditor--cache-subreddit) my-data)
-    (redditor--subreddit-show)))
+    (setf (gethash sub md4rd--cache-sub) my-data)
+    (md4rd--sub-show)))
 
-(defvar redditor--subreddit-url
+(defvar md4rd--sub-url
   "https://www.reddit.com/r/%s.json")
 
-(defvar redditor--comment-url nil)
+(defvar md4rd--comment-url nil)
 
-(defun redditor--fetch-comments ()
+(defun md4rd--fetch-comments ()
   "Get a list of the comments on a thread."
   (request-response-data
-   (request redditor--comment-url
-            :complete #'redditor--fetch-comments-callback
+   (request md4rd--comment-url
+            :complete #'md4rd--fetch-comments-callback
             :sync nil
             :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
 
-(defun redditor--fetch-subreddit (subreddit)
-  "Get a list of the SUBREDDIT on a thread."
+(defun md4rd--fetch-sub (sub)
+  "Get a list of the SUB on a thread."
   (request-response-data
-   (request (format redditor--subreddit-url subreddit)
+   (request (format md4rd--sub-url sub)
             :complete
             (cl-function
              (lambda (&rest data &allow-other-keys)
-               (apply #'redditor--fetch-subreddit-callback subreddit data)))
+               (apply #'md4rd--fetch-sub-callback sub data)))
             :sync nil
             :parser #'json-read
             :headers `(("User-Agent" . "fun")))))
 
-(defun redditor--parse-comments-helper (comments)
+(defun md4rd--parse-comments-helper (comments)
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
@@ -103,18 +103,18 @@ COMMENTS block is the nested list structure with them."
                              (cons 'author .author)
                              (cons 'score  .score)
                              (cons 'parent_id (intern .parent_id)))))
-        (push composite redditor--comments-composite)))
-    (when .children (redditor--parse-comments .children))
+        (push composite md4rd--comments-composite)))
+    (when .children (md4rd--parse-comments .children))
     (when (and .replies
                (listp .replies))
-      (redditor--parse-comments-helper .replies))))
+      (md4rd--parse-comments-helper .replies))))
 
-(defun redditor--parse-subreddit-helper (subreddit-post subreddit)
-  "Parse the subreddit that were fetched.
+(defun md4rd--parse-sub-helper (sub-post sub)
+  "Parse the sub that were fetched.
 
-SUBREDDIT-POST is the actual post data submitted.
-SUBREDDIT block is the nested list structure with them."
-  (let-alist (alist-get 'data subreddit-post)
+SUB-POST is the actual post data submitted.
+SUB block is the nested list structure with them."
+  (let-alist (alist-get 'data sub-post)
     (when (and .name .permalink)
       (let ((composite (list (cons 'name (intern .name))
                              (cons 'permalink    .permalink)
@@ -123,63 +123,63 @@ SUBREDDIT block is the nested list structure with them."
                              (cons 'title        .title)
                              (cons 'selftext     .selftext)
                              (cons 'score        .score))))
-        (push composite (gethash subreddit redditor--subreddit-composite))))
-    (when .children (redditor--parse-subreddit .children subreddit))
+        (push composite (gethash sub md4rd--sub-composite))))
+    (when .children (md4rd--parse-sub .children sub))
     (when (and .replies
                (listp .replies))
-      (redditor--parse-subreddit-helper .replies subreddit))))
+      (md4rd--parse-sub-helper .replies sub))))
 
-(defun redditor--parse-comments (comments-vector)
+(defun md4rd--parse-comments (comments-vector)
   "Parse the cached comments and move to a hierarchy.
 
 COMMENTS-VECTOR is a vector of comments."
-  (mapcar #'redditor--parse-comments-helper comments-vector))
+  (mapcar #'md4rd--parse-comments-helper comments-vector))
 
-(defun redditor--parse-subreddit (subreddit-vector subreddit)
-  "Parse the cached subreddit and move to a hierarchy.
+(defun md4rd--parse-sub (sub-vector sub)
+  "Parse the cached sub and move to a hierarchy.
 
-SUBREDDIT-VECTOR is a vector of subreddit.
-SUBREDDIT is the name of the subreddit."
-  (mapcar (lambda (sub)
-            (redditor--parse-subreddit-helper sub subreddit))
-          subreddit-vector))
+SUB-VECTOR is a vector of sub.
+SUB is the name of the sub."
+  (mapcar (lambda (sub-post)
+            (md4rd--parse-sub-helper sub-post sub))
+          sub-vector))
 
-(defun redditor--parse-comments-from-cache ()
+(defun md4rd--parse-comments-from-cache ()
   "Parse comment structures from cache data."
-  (setq redditor--comments-composite nil)
-  (redditor--parse-comments redditor--cache-comments)
-  redditor--comments-composite)
+  (setq md4rd--comments-composite nil)
+  (md4rd--parse-comments md4rd--cache-comments)
+  md4rd--comments-composite)
 
-(defun redditor--parse-subreddit-from-cache (subreddit)
+(defun md4rd--parse-sub-from-cache (sub)
   "Parse comment structures from cache data.
 
-SUBREDDIT should be a valid subreddit."
-  (setf (gethash subreddit redditor--subreddit-composite) nil)
-  (redditor--parse-subreddit (list (gethash subreddit redditor--cache-subreddit)) subreddit)
-  (gethash subreddit redditor--subreddit-composite))
+SUB should be a valid sub."
+  (setf (gethash sub md4rd--sub-composite) nil)
+  (md4rd--parse-sub (list (gethash sub md4rd--cache-sub)) sub)
+  (gethash sub md4rd--sub-composite))
 
-(defun redditor--find-comment-by-name (name)
+(defun md4rd--find-comment-by-name (name)
   "Given NAME, find the corresponding comment."
   (cl-find-if
    (lambda (comment)
      (equal name (alist-get 'name comment)))
-   redditor--comments-composite))
+   md4rd--comments-composite))
 
-(defun redditor--find-subreddit-post-by-name (name)
-  "Given NAME, find the corresponding subreddit-post."
+(defun md4rd--find-sub-post-by-name (name)
+  "Given NAME, find the corresponding sub-post."
   (let ((found nil))
     (maphash
      (lambda (_ hash-value)
        (let ((post-find
               (cl-find-if
-               (lambda (subreddit-post)
-                 (equal name (alist-get 'name subreddit-post)))
+               (lambda (sub-post)
+                 (equal name (alist-get 'name sub-post)))
                hash-value)))
          (when post-find (setq found post-find))))
-     redditor--subreddit-composite)
+     md4rd--sub-composite)
     found))
 
-(defvar redditor--parentfn
+(defvar md4rd--parentfn
   (lambda (name)
     (unless (equal 'thread name)
       (let ((parent-id
@@ -188,27 +188,27 @@ SUBREDDIT should be a valid subreddit."
               (cl-find-if
                (lambda (comment)
                  (equal name (alist-get 'name comment)))
-               redditor--comments-composite))))
+               md4rd--comments-composite))))
         (if parent-id parent-id 'thread)))))
 
-(defgroup redditor nil
-  "Redditor Mode customization group."
+(defgroup md4rd nil
+  "Md4rd Mode customization group."
   :group 'applications)
 
-(defcustom redditor-subreddits-active
+(defcustom md4rd-subs-active
   '(emacs lisp+Common_Lisp prolog)
-  "List of subreddits you would like to subscribe to."
-  :group 'redditor
+  "List of subs you would like to subscribe to."
+  :group 'md4rd
   :type (list 'symbol))
 
-(defvar redditor--hierarchy (hierarchy-new))
+(defvar md4rd--hierarchy (hierarchy-new))
 
-(defvar redditor--subreddit-hierarchy (hierarchy-new))
+(defvar md4rd--sub-hierarchy (hierarchy-new))
 
-(defun redditor--comments-unique-ids (comments)
+(defun md4rd--comments-unique-ids (comments)
   "Get the unique IDs from both parent and name slots.
 
-COMMENTS should be the ‘redditor--comments-composite’.
+COMMENTS should be the ‘md4rd--comments-composite’.
 
 If we want to date sort or something, this would probably be
 the spot to do it as well."
@@ -221,40 +221,40 @@ the spot to do it as well."
      for c in comments
      collect (alist-get 'parent_id c)))))
 
-(defun redditor--hierarchy-build ()
+(defun md4rd--hierarchy-build ()
   "Generate the comment structure."
-  (setq redditor--hierarchy (hierarchy-new))
-  (hierarchy-add-tree redditor--hierarchy 'thread redditor--parentfn)
-  (let ((comments (redditor--parse-comments-from-cache)))
+  (setq md4rd--hierarchy (hierarchy-new))
+  (hierarchy-add-tree md4rd--hierarchy 'thread md4rd--parentfn)
+  (let ((comments (md4rd--parse-comments-from-cache)))
     (cl-loop
-     for comment in (redditor--comments-unique-ids comments)
+     for comment in (md4rd--comments-unique-ids comments)
      do (progn
           (hierarchy-add-tree
-           redditor--hierarchy
+           md4rd--hierarchy
            comment
-           redditor--parentfn)))))
+           md4rd--parentfn)))))
 
-(defun redditor--subreddit-hierarchy-build ()
-  "Generate the subreddit-post structure."
-  (setq redditor--subreddit-hierarchy (hierarchy-new))
-  (hierarchy-add-tree redditor--subreddit-hierarchy 'subs (lambda (_) nil))
+(defun md4rd--sub-hierarchy-build ()
+  "Generate the sub-post structure."
+  (setq md4rd--sub-hierarchy (hierarchy-new))
+  (hierarchy-add-tree md4rd--sub-hierarchy 'subs (lambda (_) nil))
   (mapcar
-   (lambda (subreddit)
-     (hierarchy-add-tree redditor--subreddit-hierarchy subreddit (lambda (_) 'subs))
-     (let ((subreddit-posts (redditor--parse-subreddit-from-cache subreddit)))
+   (lambda (sub)
+     (hierarchy-add-tree md4rd--sub-hierarchy sub (lambda (_) 'subs))
+     (let ((sub-posts (md4rd--parse-sub-from-cache sub)))
        (cl-loop
-        for subreddit-post in subreddit-posts
+        for sub-post in sub-posts
         do (progn
              (hierarchy-add-tree
-              redditor--subreddit-hierarchy
-              (alist-get 'name subreddit-post)
-              (lambda (_) subreddit))))))
-   redditor-subreddits-active))
+              md4rd--sub-hierarchy
+              (alist-get 'name sub-post)
+              (lambda (_) sub))))))
+   md4rd-subs-active))
 
-(defvar redditor--hierarchy-labelfn-hooks nil)
-(defvar redditor--subreddit-hierarchy-labelfn-hooks nil)
+(defvar md4rd--hierarchy-labelfn-hooks nil)
+(defvar md4rd--sub-hierarchy-labelfn-hooks nil)
 
-(defun redditor--hierarchy-labelfn-button (labelfn actionfn)
+(defun md4rd--hierarchy-labelfn-button (labelfn actionfn)
   "Return a function rendering LABELFN in a button.
 
 Clicking the button triggers ACTIONFN.  ACTIONFN is a function
@@ -267,28 +267,28 @@ return value of ACTIONFN is ignored."
       (make-text-button start (point)
                         'action (lambda (_) (funcall actionfn item indent)))
       (cl-loop
-       for fn in redditor--hierarchy-labelfn-hooks
+       for fn in md4rd--hierarchy-labelfn-hooks
        do (funcall fn item indent)))))
 
-(defun redditor--comments-show ()
+(defun md4rd--comments-show ()
   "Show the comments that were built in the structure."
   (interactive)
-  (setq redditor--hierarchy-labelfn-hooks
+  (setq md4rd--hierarchy-labelfn-hooks
         '((lambda (item indent)
-            (let ((comment (redditor--find-comment-by-name item)))
+            (let ((comment (md4rd--find-comment-by-name item)))
               (when comment
                 (let-alist comment
                   (insert
                    (format " (%s) → %s\n"
                            .score .body))))))))
-  (redditor--hierarchy-build)
+  (md4rd--hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
-    redditor--hierarchy
+    md4rd--hierarchy
     (hierarchy-labelfn-indent
-     (redditor--hierarchy-labelfn-button
+     (md4rd--hierarchy-labelfn-button
       (lambda (item _)
-        (let ((comment (redditor--find-comment-by-name item)))
+        (let ((comment (md4rd--find-comment-by-name item)))
           (if comment
               (insert
                (format "%s"
@@ -296,49 +296,49 @@ return value of ACTIONFN is ignored."
             (insert (symbol-name item)))))
       (lambda (item _) (message "You clicked on: %s" item)))))))
 
-(defun redditor--subreddit-show ()
-  "Show the subreddit-posts that were built in the structure."
+(defun md4rd--sub-show ()
+  "Show the sub-posts that were built in the structure."
   (interactive)
-  (setq redditor--hierarchy-labelfn-hooks
+  (setq md4rd--hierarchy-labelfn-hooks
         '((lambda (item indent)
-            (let ((subreddit-post (redditor--find-subreddit-post-by-name item)))
-              (when subreddit-post
-                (let-alist subreddit-post
+            (let ((sub-post (md4rd--find-sub-post-by-name item)))
+              (when sub-post
+                (let-alist sub-post
                   (insert
                    (format " (↑ %s / ☠ %s) by: %s"
                            .score .num_comments .author))))))))
-  (redditor--subreddit-hierarchy-build)
+  (md4rd--sub-hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
-    redditor--subreddit-hierarchy
+    md4rd--sub-hierarchy
     (hierarchy-labelfn-indent
-     (redditor--hierarchy-labelfn-button
+     (md4rd--hierarchy-labelfn-button
       (lambda (item _)
-        (let ((subreddit-post (redditor--find-subreddit-post-by-name item)))
-          (if subreddit-post
+        (let ((sub-post (md4rd--find-sub-post-by-name item)))
+          (if sub-post
               (insert
                (format "%s"
-                       (alist-get 'title subreddit-post)))
+                       (alist-get 'title sub-post)))
             (insert (symbol-name item)))))
       (lambda (item _)
-        (let* ((subreddit-post (redditor--find-subreddit-post-by-name item))
-               (permalink (alist-get 'permalink subreddit-post)))
-          (setq redditor--comment-url (format "http://reddit.com/%s.json" permalink)))
-        (redditor--fetch-comments)
-        (message "Fetching: %s" redditor--comment-url)))))))
+        (let* ((sub-post (md4rd--find-sub-post-by-name item))
+               (permalink (alist-get 'permalink sub-post)))
+          (setq md4rd--comment-url (format "http://reddit.com/%s.json" permalink)))
+        (md4rd--fetch-comments)
+        (message "Fetching: %s" md4rd--comment-url)))))))
 
 ;;;###autoload
-(defun redditor ()
+(defun md4rd ()
   "Invoke the main mode."
   (interactive)
-  ;; (redditor--fetch-comments)
-  (mapcar #'redditor--fetch-subreddit redditor-subreddits-active))
+  ;; (md4rd--fetch-comments)
+  (mapcar #'md4rd--fetch-sub md4rd-subs-active))
 
 ;;;###autoload
-(defun redditor-mode ()
+(defun md4rd-mode ()
   "Invoke the main mode."
   (interactive)
-  (redditor))
+  (md4rd))
 
-(provide 'redditor)
-;;; redditor.el ends here
+(provide 'md4rd)
+;;; md4rd.el ends here

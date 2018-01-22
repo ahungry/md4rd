@@ -1,6 +1,6 @@
-# redditor-mode
+# md4rd - Mode for Reddit
 
-Read reddit interactively from within Emacs.
+Read Reddit interactively from within Emacs.
 
 # Usage
 
@@ -8,8 +8,8 @@ Clone the repo, then in your Emacs init file:
 
 ```lisp
 (add-to-list 'load-path "/path/to/repo")
-(require 'redditor)
-(redditor-mode) ;; to launch it
+(require 'md4rd)
+(md4rd) ;; to launch it
 ```
 
 # Customization
@@ -18,7 +18,7 @@ You can subscribe to different reddits by customizing your
 rm::subreddits-active variable.
 
 ```
-(setq redditor-subreddits-active '(lisp+Common_Lisp emacs prolog)
+(setq md4rd-subs-active '(lisp+Common_Lisp emacs prolog)
 ```
 
 (A cool feature of reddit is you can view multiple reddits combined with
@@ -33,7 +33,6 @@ See the following (shown in `emacs -nw` mode):
 
 # todo
 
-- multi-reddit (view many at once)
 - comment / post upvotes/downvotes
 - customize to view other reddits + various other UI customizations
 
