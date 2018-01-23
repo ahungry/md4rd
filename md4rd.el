@@ -396,6 +396,16 @@ the spot to do it as well."
 (defvar md4rd--hierarchy-labelfn-hooks nil)
 (defvar md4rd--sub-hierarchy-labelfn-hooks nil)
 
+(defun md4rd--hierarchy-labelfn-fixed-indent (labelfn &optional indent-string)
+  "Return a function rendering LABELFN indented with INDENT-STRING.
+
+INDENT-STRING defaults to a 2-space string.  Indentation is
+multiplied by the depth of the displayed item."
+  (let ((indent-string (or indent-string "  ")))
+    (lambda (item indent)
+      (insert indent-string)
+      (funcall labelfn item indent))))
+
 (defun md4rd--hierarchy-labelfn-button (labelfn actionfn)
   "Return a function rendering LABELFN in a button.
 
@@ -427,7 +437,7 @@ return value of ACTIONFN is ignored."
   (switch-to-buffer
    (hierarchy-tree-display
     md4rd--hierarchy
-    (hierarchy-labelfn-indent
+    (md4rd--hierarchy-labelfn-fixed-indent
      (md4rd--hierarchy-labelfn-button
       (lambda (item _)
         (let ((comment (md4rd--find-comment-by-name item)))
@@ -477,7 +487,7 @@ return value of ACTIONFN is ignored."
     (switch-to-buffer
      (hierarchy-tree-display
       md4rd--sub-hierarchy
-      (hierarchy-labelfn-indent
+      (md4rd--hierarchy-labelfn-fixed-indent
        (md4rd--hierarchy-labelfn-button
         ;; Controls the label we show for the raticle post.
         (lambda (item _)
