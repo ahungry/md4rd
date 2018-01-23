@@ -7,7 +7,7 @@
 ;; URL: https://github.com/ahungry/color-theme-ahungry
 ;; Version: 0.0.2
 ;; Keywords: ahungry reddit browse news
-;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0"))
+;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -39,6 +39,7 @@
 (require 'request)
 (require 'json)
 (require 's)
+(require 'tree-mode)
 
 (defvar md4rd--version "0.0.2"
   "The current version of the mode.")
@@ -437,25 +438,26 @@ return value of ACTIONFN is ignored."
             (insert (symbol-name item)))))
       ;; Controls the button events we dispatch.
       (lambda (item _)
-          (let ((comment (md4rd--find-comment-by-name item)))
-            (let-alist comment
-              (cond
-               ((equal 'upvote md4rd--action-button-ctx)
-                (md4rd--post-vote .name +1))
+        (let ((comment (md4rd--find-comment-by-name item)))
+          (let-alist comment
+            (cond
+             ((equal 'upvote md4rd--action-button-ctx)
+              (md4rd--post-vote .name +1))
 
-               ((equal 'downvote md4rd--action-button-ctx)
-                (md4rd--post-vote .name -1))
+             ((equal 'downvote md4rd--action-button-ctx)
+              (md4rd--post-vote .name -1))
 
-               ((equal 'open md4rd--action-button-ctx)
-                (browse-url .url))
+             ((equal 'open md4rd--action-button-ctx)
+              (browse-url .url))
 
-               ((equal 'visit md4rd--action-button-ctx)
-                (message "Fetching: %s" .permalink)
-                (md4rd--fetch-comments
-                 (format "http://reddit.com/%s.json" .permalink)))
+             ((equal 'visit md4rd--action-button-ctx)
+              (message "Fetching: %s" .permalink)
+              (md4rd--fetch-comments
+               (format "http://reddit.com/%s.json" .permalink)))
 
-               (t (error "Unknown link action!"))))))))))
-  (md4rd-mode))
+             (t (error "Unknown link action!"))))))))))
+  (md4rd-mode)
+  (md4rd-widget-collapse-all 2))
 
 (defun md4rd--sub-show ()
   "Show the sub-posts that were built in the structure."
@@ -506,7 +508,8 @@ return value of ACTIONFN is ignored."
 
                (t (error "Unknown link action!"))))))))
       buffer))
-    (md4rd-mode)))
+    (md4rd-mode)
+    (md4rd-widget-collapse-all)))
 
 ;;;###autoload
 (defun md4rd ()
@@ -577,6 +580,17 @@ return value of ACTIONFN is ignored."
   (widget-button-press (point))
   (widget-forward 1))
 
+(defun md4rd-widget-collapse-all (&optional level)
+  "Iterate all widgets in buffer and close em at LEVEL."
+  (interactive)
+  (goto-char (point-min))
+  (tree-mode-expand-level (or level 1)))
+
+(defun md4rd-widget-expand-all ()
+  "Iterate all widgets in buffer and expand em."
+  (interactive)
+  (tree-mode-expand-level 0))
+
 (defvar md4rd-mode-map
   (let ((map (make-keymap)))
     (define-key map (kbd "u") 'md4rd-upvote)
@@ -585,6 +599,8 @@ return value of ACTIONFN is ignored."
     (define-key map (kbd "n") 'widget-forward)
     (define-key map (kbd "t") 'md4rd-widget-toggle-line)
     (define-key map (kbd "p") 'widget-backward)
+    (define-key map (kbd "e") 'md4rd-widget-expand-all)
+    (define-key map (kbd "c") 'md4rd-widget-collapse-all)
     (define-key map (kbd "<backtab>") 'widget-backward)
     map)
   "Keymap for md4rd major mode.")
@@ -599,6 +615,8 @@ return value of ACTIONFN is ignored."
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "n") 'widget-forward)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "t") 'md4rd-widget-toggle-line)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "p") 'widget-backward)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "e") 'md4rd-widget-expand-all)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "c") 'md4rd-widget-collapse-all)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "<backtab>") 'widget-backward)))
 
 ;;;###autoload
