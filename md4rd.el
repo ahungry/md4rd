@@ -566,11 +566,26 @@ return value of ACTIONFN is ignored."
 
 ;; Mode related code:
 
+(defun md4rd-widget-toggle-line ()
+  "Hop to the widget and open it up."
+  (interactive)
+  ;; If we're at the article text, we get 'button
+  ;; On the widget, we receive nil for 2nd check.
+  (unless (and (button-at (point))
+               (not (button-type (button-at (point)))))
+    (widget-backward 1))
+  (widget-button-press (point))
+  (widget-forward 1))
+
 (defvar md4rd-mode-map
   (let ((map (make-keymap)))
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
     (define-key map (kbd "o") 'md4rd-open)
+    (define-key map (kbd "n") 'widget-forward)
+    (define-key map (kbd "t") 'md4rd-widget-toggle-line)
+    (define-key map (kbd "p") 'widget-backward)
+    (define-key map (kbd "<backtab>") 'widget-backward)
     map)
   "Keymap for md4rd major mode.")
 
@@ -580,7 +595,11 @@ return value of ACTIONFN is ignored."
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "u") 'md4rd-upvote)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "d") 'md4rd-downvote)
-    (evil-define-key '(normal motion) md4rd-mode-map (kbd "o") 'md4rd-open)))
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "o") 'md4rd-open)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "n") 'widget-forward)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "t") 'md4rd-widget-toggle-line)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "p") 'widget-backward)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "<backtab>") 'widget-backward)))
 
 ;;;###autoload
 (defun md4rd-mode ()
