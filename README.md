@@ -60,11 +60,10 @@ buffer and upvote or downvote as you like.
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
     (define-key map (kbd "o") 'md4rd-open)
-    (define-key map (kbd "n") 'widget-forward)
     (define-key map (kbd "t") 'md4rd-widget-toggle-line)
-    (define-key map (kbd "p") 'widget-backward)
     (define-key map (kbd "e") 'md4rd-widget-expand-all)
     (define-key map (kbd "c") 'md4rd-widget-collapse-all)
+    (define-key map (kbd "TAB") 'widget-forward)
     (define-key map (kbd "<backtab>") 'widget-backward)
 ```
 

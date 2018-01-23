@@ -574,9 +574,12 @@ return value of ACTIONFN is ignored."
   (interactive)
   ;; If we're at the article text, we get 'button
   ;; On the widget, we receive nil for 2nd check.
-  (unless (and (button-at (point))
-               (not (button-type (button-at (point)))))
+  (when (and (button-at (point))
+             (equal 'button (button-type (button-at (point)))))
     (widget-backward 1))
+
+  (unless (button-at (point))
+    (widget-forward 1))
   (widget-button-press (point))
   (widget-forward 1))
 
@@ -596,11 +599,10 @@ return value of ACTIONFN is ignored."
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
     (define-key map (kbd "o") 'md4rd-open)
-    (define-key map (kbd "n") 'widget-forward)
     (define-key map (kbd "t") 'md4rd-widget-toggle-line)
-    (define-key map (kbd "p") 'widget-backward)
     (define-key map (kbd "e") 'md4rd-widget-expand-all)
     (define-key map (kbd "c") 'md4rd-widget-collapse-all)
+    (define-key map (kbd "TAB") 'widget-forward)
     (define-key map (kbd "<backtab>") 'widget-backward)
     map)
   "Keymap for md4rd major mode.")
@@ -612,11 +614,10 @@ return value of ACTIONFN is ignored."
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "u") 'md4rd-upvote)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "d") 'md4rd-downvote)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "o") 'md4rd-open)
-    (evil-define-key '(normal motion) md4rd-mode-map (kbd "n") 'widget-forward)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "t") 'md4rd-widget-toggle-line)
-    (evil-define-key '(normal motion) md4rd-mode-map (kbd "p") 'widget-backward)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "e") 'md4rd-widget-expand-all)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "c") 'md4rd-widget-collapse-all)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "TAB") 'widget-forward)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "<backtab>") 'widget-backward)))
 
 ;;;###autoload
