@@ -358,15 +358,40 @@ If WIN is nil, the selected window is splitted."
     (select-window new-win)
     (switch-to-buffer buf)))
 
+;; Lifted from window.el kill-buffer-and-window
+(defun md4rd--reply-kill ()
+  "Kill the reply buffer entirely."
+  (interactive)
+  (let ((window-to-delete (selected-window))
+        (buffer-to-kill (current-buffer))
+        (delete-window-hook (lambda () (ignore-errors (delete-window)))))
+    (unwind-protect
+        (progn
+          (add-hook 'kill-buffer-hook delete-window-hook t t)
+          (if (kill-buffer (current-buffer))
+              ;; If `delete-window' failed before, we rerun it to regenerate
+              ;; the error so it can be seen in the echo area.
+              (when (eq (selected-window) window-to-delete)
+                (delete-window))))
+      ;; If the buffer is not dead for some reason (probably because
+      ;; of a `quit' signal), remove the hook again.
+      (ignore-errors
+        (with-current-buffer buffer-to-kill
+          (remove-hook 'kill-buffer-hook delete-window-hook t))))))
+
 (defun md4rd--reply-pop (name)
   "Pop up a reply buffer to send a response to NAME comment."
   (interactive)
   (let ((reply-buffer (generate-new-buffer "*md4rd-reply*")))
     (md4rd-pop-to-buffer-in-current-window reply-buffer)
+    (md4rd-reply-mode)
     (insert (format "Replying to comment id: %s\n" name))
-    (insert ";; C-c to submit, C-k to cancel.\n")
+    (insert ";; C-c C-c to submit, C-c C-k to cancel.\n")
     (insert ";; Text above this line will be ignored.\n")
-    (insert ";; -------------------------------------\n")))
+    (insert ";; -------------------------------------\n")
+    (add-text-properties (point-min) (point-max)
+                         `(font-lock-face font-lock-comment-face rear-nonsticky t))
+    (font-lock-flush)))
 
 (defvar md4rd--hierarchy (hierarchy-new))
 
@@ -644,6 +669,13 @@ return value of ACTIONFN is ignored."
   (interactive)
   (tree-mode-expand-level 0))
 
+(defvar md4rd-reply-mode-map
+  (let ((map (make-keymap)))
+    (define-key map (kbd "C-c C-c") (lambda () (message "Reply TODO")))
+    (define-key map (kbd "C-c C-k") 'md4rd--reply-kill)
+    map)
+  "Keymap for md4rd reply major mode.")
+
 (defvar md4rd-mode-map
   (let ((map (make-keymap)))
     (define-key map (kbd "r") 'md4rd-reply)
@@ -671,6 +703,15 @@ return value of ACTIONFN is ignored."
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "c") 'md4rd-widget-collapse-all)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "TAB") 'widget-forward)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "<backtab>") 'widget-backward)))
+
+(defun md4rd-reply-mode ()
+  "Invoke the main reply mode."
+  (interactive)
+  (kill-all-local-variables)
+  (use-local-map md4rd-reply-mode-map)
+  (setq major-mode 'md4rd-reply-mode)
+  (setq mode-name "md4rd-reply")
+  (run-hooks 'md4rd-reply-mode-hook))
 
 ;;;###autoload
 (defun md4rd-mode ()
