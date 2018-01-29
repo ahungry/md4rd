@@ -343,6 +343,31 @@ SUB should be a valid sub."
 
 ;; Display related code (thanks hierarchy):
 
+;; Derived from twittering-mode.el
+(defun md4rd-pop-to-buffer-in-current-window (buf &optional win)
+  "Select the buffer BUF in the window WIN by splitting it.
+If WIN is nil, the selected window is splitted."
+  (let* ((win (or win (selected-window)))
+	 (size
+	  (let ((rest (- (window-height win) 15)))
+	    (if (<= rest 3)
+		;; To avoid an error due to a too small window.
+		nil
+	      rest)))
+	 (new-win (split-window win size)))
+    (select-window new-win)
+    (switch-to-buffer buf)))
+
+(defun md4rd--reply-pop (name)
+  "Pop up a reply buffer to send a response to NAME comment."
+  (interactive)
+  (let ((reply-buffer (generate-new-buffer "*md4rd-reply*")))
+    (md4rd-pop-to-buffer-in-current-window reply-buffer)
+    (insert (format "Replying to comment id: %s\n" name))
+    (insert ";; C-c to submit, C-k to cancel.\n")
+    (insert ";; Text above this line will be ignored.\n")
+    (insert ";; -------------------------------------\n")))
+
 (defvar md4rd--hierarchy (hierarchy-new))
 
 (defvar md4rd--sub-hierarchy (hierarchy-new))
@@ -451,6 +476,9 @@ return value of ACTIONFN is ignored."
         (let ((comment (md4rd--find-comment-by-name item)))
           (let-alist comment
             (cond
+             ((equal 'reply md4rd--action-button-ctx)
+              (md4rd--reply-pop .name))
+
              ((equal 'upvote md4rd--action-button-ctx)
               (md4rd--post-vote .name +1))
 
@@ -540,6 +568,18 @@ return value of ACTIONFN is ignored."
 
 ;;  Actions related code:
 
+(defun md4rd-reply ()
+  "Reply something the user is on."
+  (interactive)
+  (unless (md4rd-logged-in-p)
+    (md4rd-login))
+  ;; Ensure we're actually on a plain button, not a tree widget.
+  (when (equal 'button (button-type (button-at (point))))
+    (setq md4rd--action-button-ctx 'reply)
+    (message "Reply!")
+    (push-button)
+    (setq md4rd--action-button-ctx 'visit)))
+
 (defun md4rd-upvote ()
   "Upvote something the user is on."
   (interactive)
@@ -606,6 +646,7 @@ return value of ACTIONFN is ignored."
 
 (defvar md4rd-mode-map
   (let ((map (make-keymap)))
+    (define-key map (kbd "r") 'md4rd-reply)
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
     (define-key map (kbd "o") 'md4rd-open)
@@ -621,6 +662,7 @@ return value of ACTIONFN is ignored."
   "Bind commands for evil users as well (when its on)."
   (interactive)
   (when (fboundp 'evil-define-key)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "r") 'md4rd-reply)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "u") 'md4rd-upvote)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "d") 'md4rd-downvote)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "o") 'md4rd-open)
