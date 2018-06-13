@@ -73,7 +73,7 @@ You can subscribe to different reddits by customizing your
 rm::subreddits-active variable.
 
 ```
-(setq md4rd-subs-active '(lisp+Common_Lisp emacs prolog)
+(setq md4rd-subs-active '(lisp+Common_Lisp emacs prolog))
 ```
 
 (A cool feature of reddit is you can view multiple reddits combined with
