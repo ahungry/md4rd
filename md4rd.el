@@ -604,6 +604,11 @@ return value of ACTIONFN is ignored."
   (interactive)
   (tree-mode-expand-level 0))
 
+(defun md4rd-jump-to-subs ()
+  "Jump back to subs hierarchy after visiting a thread"
+  (interactive)
+  (switch-to-buffer "*subreddits*"))
+
 (defvar md4rd-mode-map
   (let ((map (make-keymap)))
     (define-key map (kbd "u") 'md4rd-upvote)
@@ -614,6 +619,7 @@ return value of ACTIONFN is ignored."
     (define-key map (kbd "c") 'md4rd-widget-collapse-all)
     (define-key map (kbd "TAB") 'widget-forward)
     (define-key map (kbd "<backtab>") 'widget-backward)
+    (define-key map (kbd "q") 'md4rd-jump-to-subs)
     map)
   "Keymap for md4rd major mode.")
 
