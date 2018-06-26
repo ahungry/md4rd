@@ -57,6 +57,7 @@ buffer and upvote or downvote as you like.
 # Keys
 
 ```lisp
+    (define-key map (kbd "r") 'md4rd-reply)
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
     (define-key map (kbd "o") 'md4rd-open)
