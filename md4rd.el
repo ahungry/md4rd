@@ -5,7 +5,7 @@
 ;; Author: Matthew Carter <m@ahungry.com>
 ;; Maintainer: Matthew Carter <m@ahungry.com>
 ;; URL: https://github.com/ahungry/md4rd
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Keywords: ahungry reddit browse news
 ;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
 
@@ -41,7 +41,7 @@
 (require 's)
 (require 'tree-mode)
 
-(defvar md4rd--version "0.0.2"
+(defvar md4rd--version "0.0.3"
   "The current version of the mode.")
 
 ;;   ___   _       _   _
@@ -60,7 +60,7 @@
   "The client ID that links this up to the reddit.com OAuth endpoint.")
 
 (defvar md4rd--oauth-url
-  "https://www.reddit.com/api/v1/authorize?client_id=%s&response_type=code&state=nil&redirect_uri=%s&duration=permanent&scope=vote"
+  "https://www.reddit.com/api/v1/authorize?client_id=%s&response_type=code&state=nil&redirect_uri=%s&duration=permanent&scope=vote,submit"
   "The OAuth URL/endpoint.")
 
 (defvar md4rd--oauth-access-token-uri
@@ -182,7 +182,7 @@ Should be one of visit, upvote, downvote, open.")
   (request-response-data
    (request "https://oauth.reddit.com/api/comment"
             :complete nil
-            :data (format "parent_id=%s&text=%s" id message)
+            :data (format "thing_id=%s&text=%s" id message)
             :sync nil
             :type "POST"
             :parser #'json-read
@@ -401,7 +401,8 @@ If WIN is nil, the selected window is splitted."
     (goto-char (point-min))
     (forward-line 4)
     (let ((content (buffer-substring (point) (point-max))))
-      (md4rd--post-reply md4rd--reply-to-id content))))
+      (md4rd--post-reply md4rd--reply-to-id content)
+      (md4rd--reply-kill))))
 
 (defun md4rd--reply-pop (name)
   "Pop up a reply buffer to send a response to NAME comment."
