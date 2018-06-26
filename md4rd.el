@@ -176,6 +176,19 @@ Should be one of visit, upvote, downvote, open.")
             :headers `(("User-Agent" . "md4rd")
                        ("Authorization" . ,(format  "bearer %s" md4rd--oauth-access-token))))))
 
+(defun md4rd--post-reply (id message)
+  "Cast a vote on a thing.  ID is the t3_xxx type id, MESSAGE is the message."
+  (message (format  "Replying to %s with a value of: %s" id message))
+  (request-response-data
+   (request "https://oauth.reddit.com/api/comment"
+            :complete nil
+            :data (format "parent_id=%s&text=%s" id message)
+            :sync nil
+            :type "POST"
+            :parser #'json-read
+            :headers `(("User-Agent" . "md4rd")
+                       ("Authorization" . ,(format  "bearer %s" md4rd--oauth-access-token))))))
+
 (defvar md4rd--cache-comments nil
   "Store the most recent comment cache/fetch.")
 
@@ -379,9 +392,21 @@ If WIN is nil, the selected window is splitted."
         (with-current-buffer buffer-to-kill
           (remove-hook 'kill-buffer-hook delete-window-hook t))))))
 
+(defvar md4rd--reply-to-id nil)
+
+(defun md4rd--reply-send ()
+  "Send the reply buffer message."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (forward-line 4)
+    (let ((content (buffer-substring (point) (point-max))))
+      (md4rd--post-reply md4rd--reply-to-id content))))
+
 (defun md4rd--reply-pop (name)
   "Pop up a reply buffer to send a response to NAME comment."
   (interactive)
+  (setq md4rd--reply-to-id name)
   (let ((reply-buffer (generate-new-buffer "*md4rd-reply*")))
     (md4rd-pop-to-buffer-in-current-window reply-buffer)
     (md4rd-reply-mode)
@@ -676,7 +701,7 @@ return value of ACTIONFN is ignored."
 
 (defvar md4rd-reply-mode-map
   (let ((map (make-keymap)))
-    (define-key map (kbd "C-c C-c") (lambda () (message "Reply TODO")))
+    (define-key map (kbd "C-c C-c") 'md4rd--reply-send)
     (define-key map (kbd "C-c C-k") 'md4rd--reply-kill)
     map)
   "Keymap for md4rd reply major mode.")
