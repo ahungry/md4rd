@@ -41,7 +41,7 @@
 (require 's)
 (require 'tree-mode)
 
-(defvar md4rd--version "0.0.3"
+(defvar md4rd--version "0.0.4"
   "The current version of the mode.")
 
 ;;   ___   _       _   _
