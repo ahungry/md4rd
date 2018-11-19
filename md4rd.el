@@ -644,7 +644,7 @@ return value of ACTIONFN is ignored."
     (setq md4rd--action-button-ctx 'visit)))
 
 (defun md4rd-downvote ()
-  "Upvote something the user is on."
+  "Downvote something the user is on."
   (interactive)
   (unless (md4rd-logged-in-p)
     (md4rd-login))
@@ -655,13 +655,36 @@ return value of ACTIONFN is ignored."
     (setq md4rd--action-button-ctx 'visit)))
 
 (defun md4rd-open ()
-  "Upvote something the user is on."
+  "Open the thread in browser, or toggle the subreddit."
   (interactive)
-  (when (equal 'button (button-type (button-at (point))))
-    (setq md4rd--action-button-ctx 'open)
-    (message "Opening!")
-    (push-button)
-    (setq md4rd--action-button-ctx 'visit)))
+  (save-excursion
+    (forward-button 1)
+    (condition-case-unless-debug nil
+        (let ((md4rd--action-button-ctx 'open))
+          (push-button))
+      (error
+       (condition-case-unless-debug nil
+           (progn
+             (widget-backward 1)
+             (tree-mode-toggle-expand))
+         (error
+          (message "Cannot open next button.")))))))
+
+(defun md4rd-visit ()
+  "Visit the thread in Emacs, or toggle the subreddit."
+  (interactive)
+  (save-excursion
+    (forward-button 1)
+    (condition-case-unless-debug nil
+        (let ((md4rd--action-button-ctx 'visit))
+          (push-button))
+      (error
+       (condition-case-unless-debug nil
+           (progn
+             (widget-backward 1)
+             (tree-mode-toggle-expand))
+         (error
+          (message "Cannot visit next button.")))))))
 
 ;;  __  __         _
 ;; |  \/  |___  __| |___
@@ -685,15 +708,16 @@ return value of ACTIONFN is ignored."
   (widget-forward 1))
 
 (defun md4rd-widget-collapse-all (&optional level)
-  "Iterate all widgets in buffer and close em at LEVEL."
-  (interactive)
-  (goto-char (point-min))
+  "Collapse to LEVEL, or to the subreddit list by default."
+  (interactive "p")
+  (tree-mode-goto-root)
   (tree-mode-expand-level (or level 1)))
 
-(defun md4rd-widget-expand-all ()
-  "Iterate all widgets in buffer and expand em."
-  (interactive)
-  (tree-mode-expand-level 0))
+(defun md4rd-widget-expand-all (&optional level)
+  "Expand to LEVEL, or expand all nodes by default."
+  (interactive "p")
+  (tree-mode-goto-root)
+  (tree-mode-expand-level (or level 0)))
 
 (defun md4rd-jump-to-subs ()
   "Jump back to subs hierarchy after visiting a thread"
