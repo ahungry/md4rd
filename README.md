@@ -57,15 +57,24 @@ buffer and upvote or downvote as you like.
 # Keys
 
 ```lisp
+    (define-key map (kbd "u") 'tree-mode-goto-parent)
+    (define-key map (kbd "o") 'md4rd-open)
+    (define-key map (kbd "v") 'md4rd-visit)
+    (define-key map (kbd "e") 'tree-mode-toggle-expand)
+    (define-key map (kbd "E") 'md4rd-widget-expand-all)
+    (define-key map (kbd "C") 'md4rd-widget-collapse-all)
+    (define-key map (kbd "n") 'widget-forward)
+    (define-key map (kbd "j") 'widget-forward)
+    (define-key map (kbd "h") 'backward-button)
+    (define-key map (kbd "p") 'widget-backward)
+    (define-key map (kbd "k") 'widget-backward)
+    (define-key map (kbd "l") 'forward-button)
+    (define-key map (kbd "q") 'kill-current-buffer)
     (define-key map (kbd "r") 'md4rd-reply)
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
-    (define-key map (kbd "o") 'md4rd-open)
     (define-key map (kbd "t") 'md4rd-widget-toggle-line)
-    (define-key map (kbd "e") 'md4rd-widget-expand-all)
-    (define-key map (kbd "c") 'md4rd-widget-collapse-all)
-    (define-key map (kbd "TAB") 'widget-forward)
-    (define-key map (kbd "<backtab>") 'widget-backward)
+
 ```
 
 # Customization
