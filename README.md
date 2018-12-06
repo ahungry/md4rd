@@ -103,8 +103,10 @@ function + hook combo.
 
 See the following (shown in `emacs -nw` mode):
 
-![subreddit](https://raw.githubusercontent.com/ahungry/redditor-mode/master/img/redditor-mode-3.png)
-![comments](https://raw.githubusercontent.com/ahungry/redditor-mode/master/img/redditor-mode-2.png)
+Note - this first one is with the indent-all-the-lines hook enabled:
+![indented](https://raw.githubusercontent.com/ahungry/md4rd-mode/master/img/md4rd-indented.png)
+![subreddit](https://raw.githubusercontent.com/ahungry/md4rd-mode/master/img/redditor-mode-3.png)
+![comments](https://raw.githubusercontent.com/ahungry/md4rd-mode/master/img/redditor-mode-2.png)
 
 # License
 
