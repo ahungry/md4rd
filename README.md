@@ -89,6 +89,16 @@ rm::subreddits-active variable.
 (A cool feature of reddit is you can view multiple reddits combined with
 the `+` concatenation).
 
+## Hooks
+
+If you hate the really wide text / no default indent, try this new
+function + hook combo.
+
+```
+(add-hook 'md4rd-mode-hook 'md4rd-indent-all-the-lines)
+
+```
+
 # Screenshots
 
 See the following (shown in `emacs -nw` mode):

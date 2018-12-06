@@ -5,7 +5,7 @@
 ;; Author: Matthew Carter <m@ahungry.com>
 ;; Maintainer: Matthew Carter <m@ahungry.com>
 ;; URL: https://github.com/ahungry/md4rd
-;; Version: 0.0.3
+;; Version: 0.1.0
 ;; Keywords: ahungry reddit browse news
 ;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
 
@@ -531,7 +531,7 @@ return value of ACTIONFN is ignored."
               (md4rd--reply-pop .name))
 
              ((equal 'upvote md4rd--action-button-ctx)
-              (md4rd--post-vote .name +1))
+              (md4rd--post-vote .name 1))
 
              ((equal 'downvote md4rd--action-button-ctx)
               (md4rd--post-vote .name -1))
@@ -545,8 +545,21 @@ return value of ACTIONFN is ignored."
                (format "http://reddit.com/%s.json" .permalink)))
 
              (t (error "Unknown link action!"))))))))))
+  ;; (md4rd-widget-collapse-all 2)
+  (md4rd-widget-expand-all)
   (md4rd-mode)
-  (md4rd-widget-collapse-all 2))
+  ;; TODO: Maybe I'll make this auto-run, but it is problematic atm,
+  ;; when the trees are toggled, the nice indent/fill is lost.
+  ;; (md4rd-indent-all-the-lines)
+  )
+
+(defun md4rd-indent-all-the-lines ()
+  "Indent them!"
+  (interactive)
+  (setq inhibit-read-only t)
+  ;; (fill-region (point-min) (point-max))
+  (indent-region (point-min) (point-max))
+  (setq inhibit-read-only nil))
 
 (defun md4rd--sub-show ()
   "Show the sub-posts that were built in the structure."
@@ -568,7 +581,7 @@ return value of ACTIONFN is ignored."
       md4rd--sub-hierarchy
       (md4rd--hierarchy-labelfn-fixed-indent
        (md4rd--hierarchy-labelfn-button
-        ;; Controls the label we show for the raticle post.
+        ;; Controls the label we show for the article post.
         (lambda (item _)
           (let ((sub-post (md4rd--find-sub-post-by-name item)))
             (if sub-post
@@ -750,6 +763,7 @@ return value of ACTIONFN is ignored."
     (define-key map (kbd "u") 'md4rd-upvote)
     (define-key map (kbd "d") 'md4rd-downvote)
     (define-key map (kbd "t") 'md4rd-widget-toggle-line)
+    (define-key map (kbd "M-q") 'md4rd-indent-all-the-lines)
     map)
   "Keymap for md4rd major mode.")
 
@@ -764,6 +778,7 @@ return value of ACTIONFN is ignored."
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "t") 'md4rd-widget-toggle-line)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "e") 'md4rd-widget-expand-all)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "c") 'md4rd-widget-collapse-all)
+    (evil-define-key '(normal motion) md4rd-mode-map (kbd "M-q") 'md4rd-indent-all-the-lines)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "TAB") 'widget-forward)
     (evil-define-key '(normal motion) md4rd-mode-map (kbd "<backtab>") 'widget-backward)))
 
@@ -776,6 +791,39 @@ return value of ACTIONFN is ignored."
   (setq mode-name "md4rd-reply")
   (run-hooks 'md4rd-reply-mode-hook))
 
+(defun md4rd-get-current-indent ()
+  (save-excursion
+    (forward-line -1)
+    (while (looking-at "^[ ]*$")
+      (forward-line -1))
+    (let* ((l (thing-at-point 'line t))
+           (lpos (string-match "[A-Za-z0-9]" l)))
+      (if (and lpos (> lpos 0)) (max lpos (current-indentation))))))
+
+(defun md4rd-fill-line ()
+ (let (spos epos)
+          (save-excursion
+            (beginning-of-line)
+            (setq spos (point))
+            (end-of-line)
+            (setq epos (point))
+            (fill-region spos epos))))
+
+(defun md4rd-indent-line ()
+  "See what happens."
+  (interactive)
+  (beginning-of-line)
+  (md4rd-fill-line)
+  (if (or (looking-at "^.*[[]-")
+              (looking-at "^.*`-]")
+              (looking-at "^.*|-]")
+              (looking-at "^.**→"))
+      (md4rd-fill-line)
+    (let ((cur-indent (md4rd-get-current-indent)))
+      (unless (bobp)
+        (fill-paragraph))
+      (indent-line-to cur-indent))))
+
 ;;;###autoload
 (defun md4rd-mode ()
   "Invoke the main mode."
@@ -783,9 +831,12 @@ return value of ACTIONFN is ignored."
   (kill-all-local-variables)
   (use-local-map md4rd-mode-map)
   (md4rd-evil-binds)
+  (set (make-local-variable 'indent-line-function) 'md4rd-indent-line)
   (setq major-mode 'md4rd-mode)
   (setq mode-name "md4rd")
   (run-hooks 'md4rd-mode-hook))
+
+;; (add-hook 'md4rd-mode-hook 'md4rd-indent-all-the-lines)
 
 (provide 'md4rd)
 ;;; md4rd.el ends here
