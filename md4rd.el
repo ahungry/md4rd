@@ -798,7 +798,9 @@ return value of ACTIONFN is ignored."
       (forward-line -1))
     (let* ((l (thing-at-point 'line t))
            (lpos (string-match "[A-Za-z0-9]" l)))
-      (if (and lpos (> lpos 0)) (max lpos (current-indentation))))))
+      (if (and lpos (> lpos 0))
+          (max lpos (current-indentation))
+        (current-indentation)))))
 
 (defun md4rd-fill-line ()
  (let (spos epos)
