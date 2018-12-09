@@ -482,6 +482,34 @@ multiplied by the depth of the displayed item."
       (insert indent-string)
       (funcall labelfn item indent))))
 
+(defface md4rd--greentext-face
+  '((((type graphic) (background dark))
+     :background nil :foreground "#90a959")
+    (((type graphic) (background light))
+     :background nil :foreground "#90a959")
+    (t :background nil :foreground "#90a959"))
+  "Face for rendering greentexts."
+  :group 'md4rd)
+
+(defun md4rd--greentext (text)
+  "Take in the multiple lines of a post and color the quotes (lines
+starting with >)."
+  (let* ((entities-text (replace-regexp-in-string
+                         "\\\\?&gt;" ">" text))
+         (lines (split-string entities-text "[\n]+"))
+         (green-lines (map 'list 'md4rd--greentext-line lines)))
+    (mapconcat (lambda (l) (format "%s\n" l))
+               green-lines " ")))
+
+(defun md4rd--greentext-line (line)
+  "Take in a single line and color it if it is a quote."
+  (let ((isquote (cl-search ">" line :start2 0)))
+    (if isquote
+        (add-text-properties
+         0 (length line)
+         `(font-lock-face md4rd--greentext-face) line)))
+  line)
+
 (defun md4rd--hierarchy-labelfn-button (labelfn actionfn)
   "Return a function rendering LABELFN in a button.
 
@@ -508,7 +536,10 @@ return value of ACTIONFN is ignored."
                 (let-alist comment
                   (insert
                    (format " (%s) → %s\n"
-                           .score .body))))))))
+                           .score
+                           (if (member .author md4rd--fool-list)
+                               md4rd--fool-text
+                             (md4rd--greentext .body))))))))))
   (md4rd--hierarchy-build)
   (switch-to-buffer
    (hierarchy-tree-display
@@ -572,9 +603,10 @@ return value of ACTIONFN is ignored."
               (let ((sub-post (md4rd--find-sub-post-by-name item)))
                 (when sub-post
                   (let-alist sub-post
-                    (insert
-                     (format " (↑ %s / ☠ %s) by: %s"
-                             .score .num_comments .author))))))))
+                    (if (not (member .author md4rd--fool-list))
+                        (insert
+                         (format " (↑ %s / ☠ %s) by: %s"
+                                 .score .num_comments .author)))))))))
     (md4rd--sub-hierarchy-build)
     (switch-to-buffer
      (hierarchy-tree-display
@@ -587,7 +619,9 @@ return value of ACTIONFN is ignored."
             (if sub-post
                 (insert
                  (format "%s"
-                         (alist-get 'title sub-post)))
+                         (if (member (alist-get 'author sub-post) md4rd--fool-list)
+                             md4rd--fool-text
+                           (alist-get 'title sub-post))))
               (insert (symbol-name item)))))
         ;; Controls the button events we dispatch.
         (lambda (item _)
@@ -624,6 +658,12 @@ return value of ACTIONFN is ignored."
   "Invoke the main mode."
   (interactive)
   (md4rd))
+
+(defvar md4rd--fool-text "[deleted]"
+  "Comments by fools will be replaced by this.")
+
+(defvar md4rd--fool-list '()
+  "Do not show comments from this list of fools.")
 
 ;;    _      _   _
 ;;   /_\  __| |_(_)___ _ _  ___
