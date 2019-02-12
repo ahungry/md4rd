@@ -128,7 +128,7 @@ Should be one of visit, upvote, downvote, open.")
             :parser #'json-read
             :headers `(("User-Agent" . "md4rd")
                        ;; This is just the 'client_id:' base64'ed
-                       ("Authorization" . (format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id) t)))))))
+                       ("Authorization" . ,(format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id))))))))
 
 (cl-defun md4rd--oauth-fetch-callback-refresh-token (&rest data &allow-other-keys)
   "Callback to run when the oauth code fetch is complete."
@@ -153,7 +153,7 @@ Should be one of visit, upvote, downvote, open.")
             :parser #'json-read
             :headers `(("User-Agent" . "md4rd")
                        ;; This is just the 'client_id:' base64'ed
-                       ("Authorization" . (format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id) t)))))))
+                       ("Authorization" . ,(format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id))))))))
 
 (defun md4rd-login ()
   "Sign into the reddit system via OAuth, to allow use of authenticated endpoints."
