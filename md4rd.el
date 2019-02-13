@@ -138,7 +138,7 @@ Should be one of visit, upvote, downvote, open.")
       (error "md4rd: Failed to refresh the OAuth access token!"))
     (setq md4rd--oauth-access-token .access_token)
     ;; @todo Handle expires_in value (should be ~1 hour, so refresh before then)
-    (message "md4rd tokens refreshed.")))
+    (message "md4rd: Access token refreshed.")))
 
 (defun md4rd--oauth-fetch-refresh-token ()
   "Make a request for a new OAuth access token using the permanent refresh token."
