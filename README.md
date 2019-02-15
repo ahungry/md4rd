@@ -4,6 +4,8 @@
 
 Read Reddit interactively from within Emacs.
 
+[CHANGELOG.md](CHANGELOG.md "CHANGELOG.md")
+
 # Why the odd name?
 
 See the Reddit TOS/API guide - anything named after that trademark
