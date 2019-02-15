@@ -5,7 +5,7 @@
 ;; Author: Matthew Carter <m@ahungry.com>
 ;; Maintainer: Matthew Carter <m@ahungry.com>
 ;; URL: https://github.com/ahungry/md4rd
-;; Version: 0.1.0
+;; Version: 0.2.0
 ;; Keywords: ahungry reddit browse news
 ;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
 
@@ -41,7 +41,7 @@
 (require 's)
 (require 'tree-mode)
 
-(defvar md4rd--version "0.0.4"
+(defvar md4rd--version "0.2.0"
   "The current version of the mode.")
 
 ;;   ___   _       _   _

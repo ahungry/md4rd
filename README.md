@@ -79,6 +79,8 @@ buffer and upvote or downvote as you like.
 
 # Customization
 
+## Setting your default reddits
+
 You can subscribe to different reddits by customizing your
 rm::subreddits-active variable.
 
@@ -88,6 +90,22 @@ rm::subreddits-active variable.
 
 (A cool feature of reddit is you can view multiple reddits combined with
 the `+` concatenation).
+
+## Re-authenticating your session on sign in and every hour
+
+Add something like this into your config (sample using use-package):
+
+```
+(use-package md4rd :ensure t
+  :config
+  (add-hook 'md4rd-mode-hook 'md4rd-indent-all-the-lines)
+  (setq md4rd-subs-active '(emacs lisp+Common_Lisp prolog clojure))
+  (setq md4rd--oauth-access-token
+        "your-access-token-here")
+  (setq md4rd--oauth-refresh-token
+        "your-refresh-token-here")
+  (run-with-timer 0 3540 'md4rd-refresh-login))
+```
 
 ## Hooks
 
