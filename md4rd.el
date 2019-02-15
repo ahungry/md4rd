@@ -108,8 +108,8 @@ Should be one of visit, upvote, downvote, open.")
   "Callback to run when the oauth code fetch is complete."
   (let-alist (plist-get data :data)
     (unless (and .access_token .refresh_token .expires_in)
-      (message "Failed to fetch OAuth access_token and refresh_token values!")
-      (error "Failed to fetch OAuth access_token and refresh_token values!"))
+      (message "md4rd: Failed to fetch OAuth access_token and refresh_token values!")
+      (error "md4rd: Failed to fetch OAuth access_token and refresh_token values!"))
     (setq md4rd--oauth-access-token .access_token)
     (setq md4rd--oauth-refresh-token .refresh_token)
     ;; @todo Handle expires_in value (should be ~1 hour, so refresh before then)
@@ -128,21 +128,20 @@ Should be one of visit, upvote, downvote, open.")
             :parser #'json-read
             :headers `(("User-Agent" . "md4rd")
                        ;; This is just the 'client_id:' base64'ed
-                       ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6")))))
+                       ("Authorization" . ,(format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id))))))))
 
 (cl-defun md4rd--oauth-fetch-callback-refresh-token (&rest data &allow-other-keys)
-  "Callback to run when the oauth code fetch is complete."
+  "Callback to run when the oauth refresh fetch is complete."
   (let-alist (plist-get data :data)
     (unless (and .access_token .expires_in)
-      (message "Failed to fetch OAuth access_token and refresh_token values!")
-      (error "Failed to fetch OAuth access_token and refresh_token values!"))
+      (message "md4rd: Failed to refresh the OAuth access token!")
+      (error "md4rd: Failed to refresh the OAuth access token!"))
     (setq md4rd--oauth-access-token .access_token)
-    (setq md4rd--oauth-refresh-token .refresh_token)
     ;; @todo Handle expires_in value (should be ~1 hour, so refresh before then)
-    (message "Tokens set - consider adding md4rd--oauth-access-token and md4rd--oauth-refresh-token values to your init file to avoid signing in again in the future sessions.")))
+    (message "md4rd: Access token refreshed.")))
 
 (defun md4rd--oauth-fetch-refresh-token ()
-  "Make the initial code request for OAuth."
+  "Make a request for a new OAuth access token using the permanent refresh token."
   (request-response-data
    (request md4rd--oauth-access-token-uri
             :complete #'md4rd--oauth-fetch-callback-refresh-token
@@ -153,7 +152,7 @@ Should be one of visit, upvote, downvote, open.")
             :parser #'json-read
             :headers `(("User-Agent" . "md4rd")
                        ;; This is just the 'client_id:' base64'ed
-                       ("Authorization" . "Basic RmFFVWloQjM5MXFUd0E6")))))
+                       ("Authorization" . ,(format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id))))))))
 
 (defun md4rd-login ()
   "Sign into the reddit system via OAuth, to allow use of authenticated endpoints."
@@ -161,6 +160,11 @@ Should be one of visit, upvote, downvote, open.")
   (md4rd--oauth-browser-fetch)
   (call-interactively #'md4rd-oauth-set-code)
   (md4rd--oauth-fetch-authorization-token))
+
+(defun md4rd-refresh-login ()
+  "Refresh the OAuth authentication token (lifetime 3600 seconds)."
+  (interactive)
+  (md4rd--oauth-fetch-refresh-token))
 
 ;; For comment votes, the usable id is just the 'name' property.
 (defun md4rd--post-vote (id dir)
