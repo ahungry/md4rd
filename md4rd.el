@@ -154,6 +154,7 @@ Should be one of visit, upvote, downvote, open.")
                        ;; This is just the 'client_id:' base64'ed
                        ("Authorization" . ,(format "Basic %s" (base64-encode-string (format "%s:" md4rd--oauth-client-id))))))))
 
+;;;###autoload
 (defun md4rd-login ()
   "Sign into the reddit system via OAuth, to allow use of authenticated endpoints."
   (interactive)
@@ -161,6 +162,7 @@ Should be one of visit, upvote, downvote, open.")
   (call-interactively #'md4rd-oauth-set-code)
   (md4rd--oauth-fetch-authorization-token))
 
+;;;###autoload
 (defun md4rd-refresh-login ()
   "Refresh the OAuth authentication token (lifetime 3600 seconds)."
   (interactive)
