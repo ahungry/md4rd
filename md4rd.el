@@ -5,7 +5,7 @@
 ;; Author: Matthew Carter <m@ahungry.com>
 ;; Maintainer: Matthew Carter <m@ahungry.com>
 ;; URL: https://github.com/ahungry/md4rd
-;; Version: 0.2.0
+;; Version: 0.3.1
 ;; Keywords: ahungry reddit browse news
 ;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
 
@@ -31,6 +31,11 @@
 ;; A major mode / command set for browsing Reddit.
 ;; After installation, just run: M-x md4rd to get started!
 
+;;; News:
+
+;;;; Changes in 0.3.1:
+;; Fix for md4rd-open call.
+
 ;;; Code:
 
 (require 'hierarchy)
@@ -41,7 +46,7 @@
 (require 's)
 (require 'tree-mode)
 
-(defvar md4rd--version "0.2.0"
+(defvar md4rd--version "0.3.1"
   "The current version of the mode.")
 
 ;;   ___   _       _   _
@@ -717,7 +722,9 @@ return value of ACTIONFN is ignored."
   "Open the thread in browser, or toggle the subreddit."
   (interactive)
   (save-excursion
-    (forward-button 1)
+    ;; This doesn't seem to work at all on Emacs 27.0.50
+    ;; Not sure why Wei added it, but going to take out for now.
+    ;; (forward-button 1)
     (condition-case-unless-debug nil
         (let ((md4rd--action-button-ctx 'open))
           (push-button))
