@@ -252,18 +252,19 @@ Should be one of visit, upvote, downvote, open.")
   "Parse the comments that were fetched.
 
 COMMENTS block is the nested list structure with them."
-  (let-alist (alist-get 'data comments)
-    (when (and .name (or .body .selftext))
-      (let ((composite (list (cons 'name (intern .name))
-                             (cons 'body   (or .body .selftext))
-                             (cons 'author .author)
-                             (cons 'score  .score)
-                             (cons 'parent_id (if .parent_id (intern .parent_id) 'thread)))))
-        (push composite md4rd--comments-composite)))
-    (when .children (md4rd--parse-comments .children))
-    (when (and .replies
-               (listp .replies))
-      (md4rd--parse-comments-helper .replies))))
+  (when (listp comments)
+    (let-alist (alist-get 'data comments)
+      (when (and .name (or .body .selftext))
+        (let ((composite (list (cons 'name (intern .name))
+                               (cons 'body   (or .body .selftext))
+                               (cons 'author .author)
+                               (cons 'score  .score)
+                               (cons 'parent_id (if .parent_id (intern .parent_id) 'thread)))))
+          (push composite md4rd--comments-composite)))
+      (when .children (md4rd--parse-comments .children))
+      (when (and .replies
+                 (listp .replies))
+        (md4rd--parse-comments-helper .replies)))))
 
 (defun md4rd--parse-sub-helper (sub-post sub)
   "Parse the sub that were fetched.
