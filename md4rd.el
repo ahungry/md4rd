@@ -538,6 +538,12 @@ return value of ACTIONFN is ignored."
        for fn in md4rd--hierarchy-labelfn-hooks
        do (funcall fn item indent)))))
 
+(defvar md4rd--fool-text "[deleted]"
+  "Comments by fools will be replaced by this.")
+
+(defvar md4rd--fool-list '()
+  "Do not show comments from this list of fools.")
+
 (defun md4rd--comments-show ()
   "Show the comments that were built in the structure."
   (interactive)
@@ -670,12 +676,6 @@ return value of ACTIONFN is ignored."
   "Invoke the main mode."
   (interactive)
   (md4rd))
-
-(defvar md4rd--fool-text "[deleted]"
-  "Comments by fools will be replaced by this.")
-
-(defvar md4rd--fool-list '()
-  "Do not show comments from this list of fools.")
 
 ;;    _      _   _
 ;;   /_\  __| |_(_)___ _ _  ___
