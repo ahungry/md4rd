@@ -591,7 +591,7 @@ return value of ACTIONFN is ignored."
              ((equal 'visit md4rd--action-button-ctx)
               (message "Fetching: %s" .permalink)
               (md4rd--fetch-comments
-               (format "http://reddit.com/%s.json" .permalink)))
+               (format "http://reddit.com%s.json" .permalink)))
 
              (t (error "Unknown link action!"))))))))))
   ;; (md4rd-widget-collapse-all 2)
@@ -658,7 +658,7 @@ return value of ACTIONFN is ignored."
                ((equal 'visit md4rd--action-button-ctx)
                 (message "Fetching: %s" .permalink)
                 (md4rd--fetch-comments
-                 (format "http://reddit.com/%s.json" .permalink)))
+                 (format "http://reddit.com%s.json" .permalink)))
 
                (t (error "Unknown link action!"))))))))
       buffer))
