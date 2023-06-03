@@ -29,7 +29,29 @@ Clone the repo, then in your Emacs init file:
 
 ## Signing in / authenticated features
 
-Still a WIP / changes coming soon.
+### UPDATE 2023-06-03
+
+Reddit is planning to charge API authors for access - I'm not
+altruistic enough to pay for all of you to have login features
+(upvote/downvote) when this is primarily a reader mode, which doesn't
+require login.
+
+You can still use login features, but will require setting up your own
+API account with Reddit and configuring OAUTH2 (many guides for this,
+I won't detail here).
+
+Essentially, you'll need to set these variables correctly in your
+Emacs configs:
+
+```lisp
+(defvar md4rd--oauth-client-id "abc123"
+  "The client ID that links this up to the reddit.com OAuth endpoint.")
+
+(defvar md4rd--oauth-redirect-uri
+  "http://localhost:12345" ; Or some world facing domain you use for this
+  "The Oauth2 redirect_uri that links this up to the reddit.com OAuth endpoint.")
+
+```
 
 OAuth integration was just finished, and you can invoke the sign in
 with:

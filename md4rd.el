@@ -58,12 +58,12 @@
 ;; OAuth related code (figlets rock!):
 
 ;; https://github.com/reddit/reddit/wiki/OAuth2
-(defvar md4rd--oauth-client-id "FaEUihB391qTwA"
-  "The client ID that links this up to the reddit.com OAuth endpoint.")
+(defvar md4rd--oauth-client-id ""
+  "The client ID that links this up to the reddit.com OAuth endpoint, as generated from Reddit when you create/apply for an API app.")
 
 (defvar md4rd--oauth-redirect-uri
-  "http://ahungry.com/md4rd"
-  "The client ID that links this up to the reddit.com OAuth endpoint.")
+  ""
+  "The Oauth2 redirect_uri that links this up to the reddit.com OAuth endpoint.")
 
 (defvar md4rd--oauth-url
   "https://www.reddit.com/api/v1/authorize?client_id=%s&response_type=code&state=nil&redirect_uri=%s&duration=permanent&scope=vote,submit"
