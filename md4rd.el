@@ -7,7 +7,7 @@
 ;; URL: https://github.com/ahungry/md4rd
 ;; Version: 0.3.1
 ;; Keywords: ahungry reddit browse news
-;; Package-Requires: ((emacs "25.1") (hierarchy "0.7.0") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
+;; Package-Requires: ((emacs "25.1") (request "0.3.0") (cl-lib "0.6.1") (dash "2.12.0") (s "1.12.0") (tree-mode "1.0.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
